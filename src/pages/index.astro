@@ -1,0 +1,87 @@
+---
+// The Lab Diary: the whole site is one notebook, drawn in the browser from the
+// same content files the Sidebar template uses. Sections are tabs, each a leaf.
+import css from "../diary/notebook.css?raw";
+import notebook from "../diary/notebook.js?raw";
+import { about, day, freshness, inline, monthYear, now, owner, questions, reading, repo, site, talks, template, writing } from "../lib/content";
+
+const posts = await writing();
+const fresh = await freshness();
+
+// The featured essay is the newest piece. Paragraphs and footnotes from its Markdown.
+function essayFrom(post) {
+  if (!post) return { title: "", date: "", blurb: "", paras: [], notes: [] };
+  const blocks = (post.body || "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  const notes = [], paras = [];
+  for (const b of blocks) {
+    const note = /^\[\^(\d+)\]:\s*([\s\S]*)$/.exec(b);
+    if (note) notes.push(inline(note[2]));
+    else paras.push(inline(b.replace(/^#+\s*/, "")).replace(/\[\^(\d+)\]/g, "<sup>[$1]</sup>"));
+  }
+  return { title: post.data.title, date: day(post.data.date), blurb: post.data.blurb || "", paras, notes };
+}
+
+const PAGES = [
+  ["writing", "Writing", "Notes and a few essays"],
+  ["talks", "Talks", "Slides and recordings"],
+  ["reading", "Reading", "Books, articles and the rest"],
+  ["questions", "Questions", "Things I'd like to know"],
+  ["now", "Now", "What I'm doing this month"],
+  ["about", "About", "Who I am and how to reach me"],
+];
+
+const DATA = {
+  name: site.name, employer: site.employer, place: site.place, updated: day(fresh.date),
+  oneLiner: site.oneLiner, intro: site.intro,
+  social: site.social.map((l) => [l.label, l.url]),
+  pages: PAGES,
+  now: now.groups.map((g) => [g.heading, g.items.map(inline)]),
+  about: about.paragraphs.map(inline), contact: inline(about.contact), shortBio: inline(about.shortBio),
+  facts: about.facts.map((f) => [f.label, inline(f.value)]), colophon: inline(about.colophon),
+  writing: posts.map((p) => [day(p.data.date), p.data.title, p.data.blurb || ""]),
+  talks: [...talks.items].sort((a, b) => b.date.localeCompare(a.date)).map((t) => [day(t.date), t.title, t.where, t.links.map((l) => [l.label, l.url])]),
+  essay: essayFrom(posts[0]),
+  questions: questions.items.map((q) => [q.question, inline(q.answer)]), questionsIntro: questions.intro,
+  books: [], synced: "",
+  articles: [...reading.articles].sort((a, b) => b.date.localeCompare(a.date)).map((a) => [a.title, a.by, a.note, monthYear(a.date), a.url]),
+  misc: reading.misc.map((m) => [m.title, m.by, m.kind, m.note, m.url]),
+  pubs: [], me: "", research: { interests: [], projects: [], data: [], grants: [] }, teaching: { courses: [], group: [] },
+};
+const script = `const DATA = ${JSON.stringify(DATA).replace(/</g, "\\u003c")};\n${notebook}`;
+const description = `${site.oneLiner} ${site.intro}`.trim();
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{site.name}</title>
+<meta name="description" content={description}>
+<meta name="author" content={site.name}>
+<meta property="og:title" content={site.name}>
+<meta property="og:description" content={description}>
+<meta name="portfolio-template" content={`${template.name}@${template.version}`}>
+{owner && <meta name="portfolio-owner" content={owner}>}
+{repo && <meta name="portfolio-repo" content={repo}>}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style is:inline set:html={css}></style>
+</head>
+<body>
+<main class="scene" aria-label="Lab notebook">
+  <div class="stage">
+    <div class="book" id="book">
+      <div class="board"></div>
+      <div class="edges l"></div><div class="edges r"></div><div class="edges b"></div>
+      <aside class="left" id="left" aria-label="Left page"><div class="face lp" id="lp"></div><div class="under"></div></aside>
+      <div class="right" id="pages"></div>
+      <div class="gutter"></div><div class="binding" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <ul class="tabs" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Sections"></ul>
+    </div>
+  </div>
+</main>
+<noscript>This notebook needs JavaScript to turn its pages. <a href="/reading/books.json">Books</a>.</noscript>
+<script type="module" is:inline set:html={script}></script>
+</body>
+</html>
