@@ -1,81 +1,126 @@
 
-:root{--paper:#e7e9e2;--type:#252923;--type-2:#555c51;--rule:#444b3e;--rule-2:#444b3e40;--mono:"IBM Plex Mono",monospace;--display:"Barlow Condensed","Arial Narrow",sans-serif;--ease:cubic-bezier(.23,1,.32,1);--grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='190'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath filter='url(%23n)' opacity='.55' d='M0 0h190v190H0z'/%3E%3C/svg%3E")}
+:root{--paper:#f3efe5;--type:#1f1d19;--type-2:#5d5950;--rule:#3f3b34;--rule-2:#3f3b3440;--desk:#3b2f27;--desk-2:#241c17;--board:#b89f7e;--ease:cubic-bezier(.23,1,.32,1);
+ /* Type follows the Sidebar template (src/styles/site.css there): Apple's system faces first, the
+    self-hosted OFL fonts after them. Three roles: --font-display (the name, section headings, the
+    home letter), --font-text (what you read), --font-ui (what you scan or press). */
+ --sans:-apple-system,BlinkMacSystemFont,"Geist Variable",Geist,sans-serif;
+ --serif:"Iowan Old Style","EB Garamond Variable","EB Garamond",Georgia,serif;
+ --mono:ui-monospace,Menlo,Consolas,monospace;
+ --font-display:var(--serif);--display-adjust:.45;--display-weight:500;
+ --font-text:var(--sans);--font-ui:var(--sans);
+ /* Type scale: --fs-* steps only */
+ --fs-2xs:11px;--fs-xs:12px;--fs-sm:13px;--fs-md:14px;--fs-lg:15px;--fs-base:15px;--fs-xl:20px;
+ --fs-lead:clamp(19px,2.5vw + 9px,22px);--fs-2xl:24px;--fs-3xl:clamp(34px,5vw,42px);
+ --lh-none:1;--lh-tight:1.15;--lh-snug:1.3;--lh-medium:1.4;--lh-normal:1.5;--lh-body:1.55;
+ --track-display:-.01em;--track-snug:-.015em;--track-caps:.06em;
+ /* Space: --space-N = N × 4px */
+ --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;
+ --measure:600px;--tabs-w:124px;
+ /* Laid flat on the desk. --tilt (rotateX), --lean (rotateZ) and --bend (each half bowing around the wire)
+    are knobs kept at 0: a pad tilted toward the viewer keystoned and read as distortion. --half is the
+    book's half width, set by the script, so the edges and tabs would bow around the same wire. */
+ --tilt:0deg;--lean:0deg;--bend:0deg;--half:560px;--grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='190'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath filter='url(%23n)' opacity='.55' d='M0 0h190v190H0z'/%3E%3C/svg%3E")}
 *{box-sizing:border-box}html,body{height:100%}
-body{margin:0;background:#727c75;color:var(--type);font:400 12px/1.65 var(--mono);overflow:hidden;-webkit-font-smoothing:antialiased;background-image:radial-gradient(ellipse at 50% 25%,#c1c8c080,#4b585c33 75%),linear-gradient(125deg,#94a097,#79867e 50%,#62706b)}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.17;background-image:var(--grain)}
-a{color:inherit;text-decoration-thickness:1px;text-underline-offset:3px}a:hover{color:#526958}
+body{margin:0;background:var(--desk);color:var(--type);font:var(--fs-base)/var(--lh-body) var(--font-text);overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;background-image:radial-gradient(ellipse at 50% 30%,#8b76634d,#00000033 75%),linear-gradient(125deg,#4a3b31,var(--desk) 50%,var(--desk-2))}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.12;background-image:var(--grain)}
+a{color:inherit;text-decoration-thickness:1px;text-underline-offset:3px}a:hover{color:#7a4e22}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}button:disabled{cursor:default;opacity:.35}
-:focus-visible{outline:2px solid #2c5144;outline-offset:3px}button,a{touch-action:manipulation}
+:focus-visible{outline:2px solid #7a4e22;outline-offset:3px}button,a{touch-action:manipulation}
 
 /* ---------------------------------------------------------- desk and book */
-.scene{position:fixed;inset:0;display:grid;place-items:center;padding:40px 42px 40px 150px;perspective:2600px;perspective-origin:50% 40%}
-.stage{position:relative;height:min(84dvh,820px);width:min(100%,calc(84dvh * 1.34));max-width:1120px;min-height:0}
+.scene{position:fixed;inset:0;display:grid;place-items:center;padding:4dvh calc(var(--tabs-w) + 36px) 4dvh 36px;perspective:2600px;perspective-origin:50% 55%}
+.stage{position:relative;height:min(92dvh,960px);width:min(100%,calc(min(92dvh,960px) * 1.5));max-width:1460px;min-height:0;transform:rotateX(var(--tilt)) rotateZ(var(--lean))} /* flat on purpose: the book keeps its own 3D context and perspective; the stage only tilts the finished picture */
 .book{position:absolute;inset:0;transform-style:preserve-3d;perspective:2200px;perspective-origin:50% 45%}
-.board{position:absolute;inset:2px -3px -4px;border-radius:1px;background:#c2c7bb;box-shadow:0 22px 36px -16px #1b2a2580,0 2px 3px #17241d55;transform:translateZ(-3px)}
-.edges{position:absolute;pointer-events:none;transform:translateZ(-2px)}.edges.l{left:-3px;top:1px;bottom:0;width:3px;background:repeating-linear-gradient(90deg,#9b9f92 0 1px,#d8dacf 1px 2px)}.edges.r{right:-4px;top:1px;bottom:0;width:4px;background:repeating-linear-gradient(90deg,#9b9f92 0 1px,#d8dacf 1px 2px)}.edges.b{left:0;right:0;bottom:-3px;height:3px;background:repeating-linear-gradient(#b7bcae 0 1px,#e0e2d8 1px 2px)}
-.left{position:absolute;inset:0 50% 0 0;transform-style:preserve-3d}.right{position:absolute;inset:0 0 0 50%;transform-style:preserve-3d}
-.gutter{position:absolute;left:calc(50% - 25px);width:50px;top:0;bottom:0;pointer-events:none;transform:translateZ(3px);background:linear-gradient(90deg,transparent,#39443016 32%,#2a352936 48%,#e8ebe291 51%,#39443020 55%,transparent)}
+.board{position:absolute;inset:2px -3px -4px;border-radius:1px;background:var(--board);box-shadow:0 34px 56px -24px #000c,0 2px 3px #0008;transform:translateZ(-3px)}
+.edges{position:absolute;pointer-events:none;transform:translateZ(-2px)}.edges.l{transform-origin:calc(var(--half) + 3px) 50%;transform:rotateY(var(--bend)) translateZ(-2px);left:-3px;top:1px;bottom:0;width:3px;background:repeating-linear-gradient(90deg,#bdb3a0 0 1px,#ece6d8 1px 2px)}.edges.r{transform-origin:calc(-1 * var(--half)) 50%;transform:rotateY(calc(-1 * var(--bend))) translateZ(-2px);right:-4px;top:1px;bottom:0;width:4px;background:repeating-linear-gradient(90deg,#bdb3a0 0 1px,#ece6d8 1px 2px)}.edges.b{left:0;right:0;bottom:-3px;height:3px;background:repeating-linear-gradient(#c9bfaa 0 1px,#efe9dc 1px 2px)}
+.left{position:absolute;inset:0 50% 0 0;transform-style:preserve-3d;transform-origin:right center;transform:rotateY(var(--bend))}.right{position:absolute;inset:0 0 0 50%;transform-style:preserve-3d;transform-origin:left center;transform:rotateY(calc(-1 * var(--bend)))}
+.gutter{position:absolute;left:calc(50% - 25px);width:50px;top:0;bottom:0;pointer-events:none;transform:translateZ(3px);background:linear-gradient(90deg,transparent,#2a221a16 32%,#2a221a36 48%,#f6f2ea91 51%,#2a221a20 55%,transparent)}
 .binding{position:absolute;left:50%;top:19px;bottom:19px;width:0;z-index:5;transform:translateZ(5px);pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
-.binding i{display:block;position:relative;width:30px;height:9px;left:-15px;border:2px solid #31372f;border-radius:45%;box-shadow:0 2px 1px #0004,inset 0 1px #d0d4c3;background:linear-gradient(transparent 2px,#59604c 3px,transparent 4px)}.binding i::before,.binding i::after{content:"";position:absolute;top:-4px;width:4px;height:13px;background:#31372f;border-radius:1px;z-index:-1}.binding i::before{left:0}.binding i::after{right:0}
+.binding i{display:block;position:relative;width:30px;height:9px;left:-15px;border:2px solid #2e2a26;border-radius:45%;box-shadow:0 2px 1px #0004,inset 0 1px #d9d2c4;background:linear-gradient(transparent 2px,#5a5147 3px,transparent 4px)}.binding i::before,.binding i::after{content:"";position:absolute;top:-4px;width:4px;height:13px;background:#2e2a26;border-radius:1px;z-index:-1}.binding i::before{left:0}.binding i::after{right:0}
 .page{position:absolute;inset:0;display:none;transform-style:preserve-3d}.page.show{display:block}
-.face{position:absolute;inset:0;background:var(--paper);contain:layout paint;background-image:linear-gradient(90deg,#46503b14,transparent 12%,#ffffff15 80%,#6d775a09);box-shadow:inset 10px 0 24px -20px #303c2c88}.face.lp{background-image:linear-gradient(90deg,#69735209,#ffffff14 20%,transparent 85%,#46503b20);box-shadow:inset -12px 0 22px -18px #35413199}
-.face::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.24;mix-blend-mode:multiply;background-image:var(--grain)}
-.pg{position:absolute;inset:0 0 40px;padding:26px 26px 20px 30px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#7e877460 transparent;overflow-wrap:break-word}.lp .pg{padding:26px 30px 20px 26px}
-.lhalf{display:none}
+.face{position:absolute;inset:0;background:var(--paper);contain:layout paint;background-image:linear-gradient(90deg,#4a3f3014,transparent 12%,#ffffff15 80%,#6d5f4a09);box-shadow:inset 10px 0 24px -20px #2f261e88}.face.lp{background-image:linear-gradient(90deg,#6d5f4a09,#ffffff14 20%,transparent 85%,#4a3f3020);box-shadow:inset -12px 0 22px -18px #2f261e99}
+.face::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.14;mix-blend-mode:multiply;background-image:var(--grain)}
+.pg{position:absolute;inset:0 0 44px;padding:var(--space-6) var(--space-6) var(--space-5) var(--space-8);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#7e877460 transparent;overflow-wrap:break-word}.lp .pg{padding:var(--space-6) var(--space-8) var(--space-5) var(--space-6)}
+/* The hidden page the sections are measured in before they are laid out (notebook.js, paginate). */
+.page.measure{display:block;visibility:hidden;pointer-events:none;z-index:-1}
+/* A doodle for each section, after its last block when the page has room for it, else left out.
+   Each is an SVG image carrying its own wobble filter, so the browser rasterises it once; a live
+   filter inside the strips of a turning leaf was re-rendered every frame and made turns stutter. */
+.doodle{width:min(40%,160px);margin:var(--space-5) 0 0 auto;color:var(--type-2);opacity:.8;transform:rotate(-2.5deg);pointer-events:none}
+.doodle img{display:block;width:100%;height:auto}
 
 /* ---------------------------------------------------- the page's language */
 /* A lined heading, a meta row, a page number, printed tables. Nothing else. */
-.h,.lab{display:flex;align-items:center;gap:10px;font:700 15px/1 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0 0 14px}
-.h::after,.lab::after{content:"";flex:1;height:10px;background:repeating-linear-gradient(#30382e 0 1px,transparent 1px 2px)}
-.lab{font-size:12px;letter-spacing:.05em;margin-bottom:10px}.lab::after{height:6px}
-.sec{margin:0 0 24px}.sec:last-child{margin-bottom:0}
-.meta{display:flex;justify-content:space-between;gap:12px;font:500 9px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--type-2);border-bottom:1px solid var(--rule);padding-bottom:7px;margin:0 0 18px}
-.no{position:absolute;bottom:16px;right:26px;font:500 9px/1 var(--mono);letter-spacing:.08em;color:var(--type-2)}.lp .no{left:26px;right:auto}.no::before{content:"PAGE ";font-size:8px}
-.ft{position:absolute;bottom:16px;left:30px;right:96px;display:flex;justify-content:space-between;font:500 9px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--type-2)}.ft button{padding:4px 0}.ft button:hover{color:var(--type)}.ft button:disabled{visibility:hidden}
-p{margin:0 0 12px;max-width:56ch}.sec p:last-child{margin-bottom:0}
-.lead{font-size:13px;margin-bottom:14px}
-.name{font:800 clamp(30px,3vw,40px)/.95 var(--display);text-transform:uppercase;letter-spacing:-.02em;margin:8px 0 8px}
-.role{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--type-2);margin:0 0 6px}
-.links{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 24px}
-.nowline{font-size:11px;color:var(--type-2);margin:0 0 22px}.nowline a{font:600 9px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--type);text-decoration:none;margin-right:8px}.nowline a:hover{text-decoration:underline}
-table{width:100%;border-collapse:collapse;font:400 11px/1.6 var(--mono)}
-th{text-align:left;font:500 8px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--type-2);padding:0 8px 6px 0;border-bottom:1px solid var(--rule)}
-td{vertical-align:top;padding:8px 8px 8px 0;border-bottom:1px solid var(--rule-2)}tr:last-child td{border-bottom:0}td:last-child,th:last-child{padding-right:0}
-td.d{width:17%;font-size:9px;letter-spacing:.02em;color:var(--type-2);white-space:nowrap}
-td.k{text-align:right;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--type-2);white-space:nowrap}
-td .s{display:block;font-size:10px;line-height:1.6;color:var(--type-2);margin-top:3px}td .s i{font-style:italic}
+/* Headings are the Sidebar's serif; the small printed labels (meta row, page numbers, column heads)
+   stay caps in the sans, tracked like the Sidebar's footnote heading. */
+.h,.lab{display:flex;align-items:center;gap:var(--space-3);margin:0 0 var(--space-4)}
+.h{font:var(--display-weight) var(--fs-2xl)/var(--lh-tight) var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:var(--track-display)}
+.h::after,.lab::after{content:"";flex:1;height:1px;background:var(--rule)}
+.cap,.lab,.meta,.no,.ft,th,td.k,tr.g td,.cells b,.all,.nowline a{font:500 var(--fs-xs)/var(--lh-medium) var(--font-ui);text-transform:uppercase;letter-spacing:var(--track-caps);color:var(--type-2);font-variant-numeric:tabular-nums}
+.lab{font-weight:600;margin:var(--space-5) 0 var(--space-3)}.lab::after{background:var(--rule-2)}
+.pg>.lab:first-child,.pg>.q:first-child{margin-top:0}p.q{margin-top:var(--space-4)}.blurb{color:var(--type-2)}
+p.hi{font:var(--display-weight) var(--fs-xl)/var(--lh-medium) var(--font-display);font-size-adjust:var(--display-adjust);margin-bottom:var(--space-2)}
+/* A piece's Markdown: headings, lists, quotes, tables and code, in the page's measure. */
+.pg h2,.pg h3{font:var(--display-weight) var(--fs-xl)/var(--lh-tight) var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:var(--track-display);margin:var(--space-5) 0 var(--space-2);max-width:var(--measure)}.pg h3{font-size:var(--fs-base)}
+.pg ul:not(.list),.pg ol{margin:0 0 var(--space-3);padding-left:1.4em;max-width:var(--measure)}.pg ul:not(.list) li,.pg ol li{margin:0 0 var(--space-1)}
+blockquote{margin:0 0 var(--space-3);padding-left:var(--space-4);border-left:2px solid var(--rule-2);font:var(--display-weight) var(--fs-xl)/var(--lh-medium) var(--font-display);font-size-adjust:var(--display-adjust);color:var(--type-2);max-width:var(--measure)}blockquote p{margin:0}
+pre{margin:0 0 var(--space-3);padding:var(--space-3);background:#0000000a;border:1px solid var(--rule-2);font:var(--fs-sm)/var(--lh-normal) var(--mono);overflow-x:auto;white-space:pre}pre code{font-size:inherit}code{font-family:var(--mono);font-size:.9em}
+.pg table{margin:0 0 var(--space-3)}img{max-width:100%;height:auto}
+.footnotes{margin-top:var(--space-5);font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--type-2)}.footnotes h2{display:flex;align-items:center;gap:var(--space-3);margin:0 0 var(--space-2);font:600 var(--fs-xs)/var(--lh-medium) var(--font-ui);font-size-adjust:none;text-transform:uppercase;letter-spacing:var(--track-caps)}.footnotes h2::after{content:"";flex:1;height:1px;background:var(--rule-2)}.footnotes ol{padding-left:1.4em}.footnotes li p{margin:0}.footnotes a[data-footnote-backref]{text-decoration:none}
+.photo{width:120px;margin:0 0 var(--space-5)}.photo img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border:1px solid var(--rule-2)}
+b.me{font-weight:600}
+.sec{margin:0 0 var(--space-6)}.sec:last-child{margin-bottom:0}
+.meta{display:flex;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--rule);padding-bottom:var(--space-2);margin:0 0 var(--space-5)}
+.no{position:absolute;bottom:var(--space-4);right:var(--space-6);line-height:1}.lp .no{left:var(--space-6);right:auto}.no::before{content:"Page ";font-size:var(--fs-2xs)}
+.ft{position:absolute;bottom:var(--space-4);left:var(--space-8);right:104px;display:flex;justify-content:space-between;line-height:1}.ft button{padding:var(--space-1) 0}.ft button:hover{color:var(--type)}.ft button:disabled{visibility:hidden}
+p{margin:0 0 var(--space-3);max-width:var(--measure);text-wrap:pretty}.sec p:last-child{margin-bottom:0}
+/* The home letter, set like the Sidebar's: the serif at the lead size. */
+.lead{font:var(--display-weight) var(--fs-lead)/var(--lh-medium) var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:var(--track-display);margin-bottom:var(--space-4)}
+.name{font:var(--display-weight) var(--fs-3xl)/var(--lh-tight) var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:var(--track-display);margin:var(--space-2) 0 var(--space-2);text-wrap:balance}
+.role{font:var(--fs-sm)/var(--lh-normal) var(--font-ui);color:var(--type-2);margin:0 0 var(--space-2)}
+.links{display:flex;flex-wrap:wrap;gap:var(--space-1) var(--space-4);font:var(--fs-sm)/var(--lh-normal) var(--font-ui);margin:0 0 var(--space-6)}
+.nowline{font-size:var(--fs-lg);color:var(--type-2);margin:0 0 var(--space-5)}.nowline a{font-weight:600;color:var(--type);text-decoration:none;margin-right:var(--space-2)}.nowline a:hover{text-decoration:underline}
+table{width:100%;border-collapse:collapse;font:var(--fs-lg)/var(--lh-normal) var(--font-text)}
+th{text-align:left;font-size:var(--fs-2xs);padding:0 var(--space-2) var(--space-2) 0;border-bottom:1px solid var(--rule)}
+td{vertical-align:top;padding:6px var(--space-2) 6px 0;border-bottom:1px solid var(--rule-2)}tr:last-child td{border-bottom:0}td:last-child,th:last-child{padding-right:0}
+td.d{width:17%;font:var(--fs-sm)/var(--lh-normal) var(--font-ui);font-variant-numeric:tabular-nums;color:var(--type-2);white-space:nowrap;padding-top:8px} /* 2px over the row padding: optical, dates sit on the title's baseline */
+td.k{text-align:right;white-space:nowrap;padding-top:8px}
+td .s{display:block;font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--type-2);margin-top:2px}td .s i{font-style:italic}
 td a{text-decoration:none}td a:hover{text-decoration:underline}
 tr.sel td.t::before{content:"* "}
-tr.g td{padding:14px 0 4px;border-bottom:1px solid var(--rule);font:500 8px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--type-2)}tr.g:first-child td{padding-top:0}
-.lnk{display:inline-flex;gap:8px;margin-left:6px}.lnk a{font-size:10px}.lnk a::before{content:"["}.lnk a::after{content:"]"}
-.all{display:inline-block;margin-top:10px;font:500 9px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}.all::after{content:" →"}.all:hover{text-decoration:underline}
-.list{list-style:none;margin:0;padding:0;font-size:11px}.list li{padding:6px 0;border-bottom:1px solid var(--rule-2)}.list li:last-child{border-bottom:0}
-.cells{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-top:14px}.cells div{min-width:0;overflow-wrap:anywhere;font-size:11px}.cells b{display:block;font:500 8px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--type-2);margin-bottom:2px}
-.photo{width:84px;aspect-ratio:4/5;border:1px solid var(--rule);display:grid;place-items:center;text-align:center;font:500 8px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--type-2);margin:0 0 18px}
-sup{font-size:8px;line-height:0}.fn{font-size:10px;color:var(--type-2)}
-.more{margin-top:20px;padding-top:12px;border-top:1px solid var(--rule);font-size:10px;color:var(--type-2)}.more a{display:inline-block;margin:2px 12px 0 0;color:var(--type);text-decoration:none}.more a:hover{text-decoration:underline}
+tr.g td{padding:var(--space-4) 0 var(--space-1);border-bottom:1px solid var(--rule);font-size:var(--fs-2xs)}tr.g:first-child td{padding-top:0}
+.lnk{display:inline-flex;gap:var(--space-2);margin-left:var(--space-2)}.lnk a{font:var(--fs-sm)/var(--lh-normal) var(--font-ui);color:var(--type-2)}.lnk a::before{content:"["}.lnk a::after{content:"]"}
+.all{font-weight:600;color:var(--type);text-decoration:none}.lab .all{order:1;margin-left:var(--space-3)} /* after the rule */.all::after{content:" →"}.all:hover{text-decoration:underline}
+.list{list-style:none;margin:0;padding:0;font-size:var(--fs-lg);line-height:var(--lh-normal)}.list li{padding:var(--space-2) 0;border-bottom:1px solid var(--rule-2)}.list li:last-child{border-bottom:0}
+.cells{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-4);margin-top:var(--space-4)}.cells div{min-width:0;overflow-wrap:anywhere;font-size:var(--fs-lg);line-height:var(--lh-normal)}.cells b{display:block;font-size:var(--fs-2xs);margin-bottom:2px}
+
+sup{font-size:.7em;line-height:0}.fn{font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--type-2)}
+.more{margin-top:var(--space-5);padding-top:var(--space-3);border-top:1px solid var(--rule);font-size:var(--fs-sm);color:var(--type-2)}.more a{display:inline-block;margin:2px var(--space-3) 0 0;color:var(--type);text-decoration:none}.more a:hover{text-decoration:underline}
 
 /* ---------------------------------------------------------- index tabs */
-/* Cut from the same paper and tucked into the left edge of the pad, under the
+/* Cut from the same paper and tucked into the right edge of the pad, under the
    page. The current tab is flush with its page and the same colour, one sheet. */
-.tabs{position:absolute;right:100%;top:30px;bottom:48px;width:108px;display:flex;flex-direction:column;gap:6px;list-style:none;padding:0;margin:0;transform:translateZ(-1px);transform-style:preserve-3d}
-.tabs .shade{position:absolute;top:0;bottom:0;right:0;width:12px;pointer-events:none;background:linear-gradient(90deg,transparent,#1f2b2240);transform:translateZ(.5px)}
+.tabs{position:absolute;left:100%;top:30px;bottom:48px;width:var(--tabs-w);display:flex;flex-direction:column;gap:6px;list-style:none;padding:0;margin:0;transform-origin:calc(-1 * var(--half)) 50%;transform:rotateY(calc(-1 * var(--bend))) translateZ(-1px);transform-style:preserve-3d}
+.tabs .shade{position:absolute;top:0;bottom:0;left:0;width:12px;pointer-events:none;background:linear-gradient(270deg,transparent,#1a141040);transform:translateZ(.5px)}
 .tab{position:relative}
-.tab button{position:relative;width:calc(100% + 4px);min-height:42px;padding:8px 14px 8px 12px;display:flex;align-items:center;gap:8px;text-align:left;border-radius:3px 0 0 3px;background:var(--c);color:#3a4236;font:600 12px/1 var(--display);text-transform:uppercase;letter-spacing:.05em;box-shadow:-1px 1px 2px #1c302433,inset 0 1px #ffffff66;transform:translateX(8px);transition:transform 200ms var(--ease),background-color 200ms,color 200ms}
+/* The tuck and the hover nudge are `left`, not translateX: Chrome mis-places a 2D transform on a
+   descendant of this tilted, flattened 3D book when hit-testing, so a nudged button could not be
+   clicked where it was painted (only the flush, un-nudged current tab worked). */
+.tab button{position:relative;width:calc(100% + 4px);margin-left:-4px;min-height:44px;padding:var(--space-2) var(--space-3) var(--space-2) var(--space-4);display:flex;align-items:center;gap:var(--space-2);text-align:left;border-radius:0 3px 3px 0;background:var(--c);color:#3b3429;font:500 var(--fs-md)/1 var(--font-ui);letter-spacing:var(--track-snug);box-shadow:1px 1px 2px #1a141033,inset 0 1px #ffffff66;left:-8px;transition:left 200ms var(--ease),background-color 200ms,color 200ms}
 .tab button::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.22;mix-blend-mode:multiply;background-image:var(--grain)}
-.tab button small{font:500 8px/1 var(--mono);letter-spacing:.06em;opacity:.65}
+.tab button small{font:500 var(--fs-2xs)/1 var(--font-ui);font-variant-numeric:tabular-nums;opacity:.65}
 .tab button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(hover:hover) and (pointer:fine){.tab:not(.on) button:hover{transform:translateX(3px);color:var(--type)}}
-.tab:not(.on) button:active{transform:translateX(5px)}
+@media(hover:hover) and (pointer:fine){.tab:not(.on) button:hover{left:-3px;color:var(--type)}}
+.tab:not(.on) button:active{left:-5px}
 .tab.on{transform:translateZ(2px)}
-.tab.on button{transform:none;background:var(--paper);color:var(--type);font-weight:700;box-shadow:-2px 2px 4px #1c302440,inset 0 1px #ffffff80}
+.tab.on button{left:0;background:var(--paper);color:var(--type);font-weight:600;box-shadow:2px 2px 4px #1a141040,inset 0 1px #ffffff80}
 .tab.on button small{opacity:.8}
 
 /* ---------------------------------------------------------- page turns */
-.sheet3d{position:absolute;inset:0;transform-style:preserve-3d;transform:translateZ(.001px);pointer-events:none}.strip{position:absolute;top:0;bottom:0;transform-origin:left center;transform-style:preserve-3d;will-change:transform}.cut{position:absolute;inset:0;overflow:hidden;contain:paint;backface-visibility:hidden;-webkit-backface-visibility:hidden}.cut.back{transform:rotateY(180deg)}.cut .face{position:absolute;top:0;bottom:0}.clone .pg{overflow:hidden;scrollbar-width:none}.riffle .clone .face::after,.riffle .face.lp::after{display:none}   /* blended grain on every strip of a riffle is more than the compositor keeps */.cut .lt{position:absolute;inset:0;pointer-events:none}.page.turning>.face{visibility:hidden}.under{position:absolute;inset:0;pointer-events:none;opacity:0;background:linear-gradient(90deg,#25321d55,transparent 45%)}.left .under{background:linear-gradient(270deg,#25321d55,transparent 45%)}
-.entry-cover{position:absolute;inset:0 0 0 50%;transform-origin:left center;transform-style:preserve-3d;z-index:8;pointer-events:none}
+.sheet3d{position:absolute;inset:0;transform-style:preserve-3d;transform:translateZ(.001px);pointer-events:none}.strip{position:absolute;top:0;bottom:0;transform-origin:left center;transform-style:preserve-3d;will-change:transform}.cut{position:absolute;inset:0;overflow:hidden;contain:paint;backface-visibility:hidden;-webkit-backface-visibility:hidden}.cut.back{transform:rotateY(180deg)}.cut .face{position:absolute;top:0;bottom:0}.clone .pg{overflow:hidden;scrollbar-width:none}.riffle .clone .face::after,.riffle .face.lp::after{display:none}   /* blended grain on every strip of a riffle is more than the compositor keeps */.cut .lt{position:absolute;inset:0;pointer-events:none}.page.turning>.face{visibility:hidden}.under{position:absolute;inset:0;pointer-events:none;opacity:0;background:linear-gradient(90deg,#2a1f1555,transparent 45%)}.left .under{background:linear-gradient(270deg,#2a1f1555,transparent 45%)}
+.entry-cover{position:absolute;inset:0 0 0 50%;transform-origin:left center;transform-style:preserve-3d;transform:rotateY(calc(-1 * var(--bend)));z-index:8;pointer-events:none}
 .entry-cover .face{backface-visibility:hidden;-webkit-backface-visibility:hidden}.entry-cover .entry-back{transform:rotateY(180deg)}
-.entry-cover .front .pg{padding:26px;overflow:hidden;inset:0 0 32px}
+.entry-cover .front .pg{padding:var(--space-6);overflow:hidden;inset:0 0 32px}
 /* While the cover is on its way the real left page stays hidden: the cover's inside is that page, so nothing changes when it lands. */
 .book.entering .left,.book.entering .tabs,.book.entering .edges.l,.book.entering .gutter{visibility:hidden}
 .book.entering:not(.opening) .board,.book.entering:not(.opening) .edges.b{clip-path:inset(0 0 0 50%)}
@@ -83,21 +128,20 @@ sup{font-size:8px;line-height:0}.fn{font-size:10px;color:var(--type-2)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}html[data-static] *,html[data-static] *::before,html[data-static] *::after{transition:none!important;animation:none!important}
 
 /* ---------------------------------------------------------- small screens */
-@media(max-height:680px) and (min-width:761px){.scene{padding-top:30px;padding-bottom:30px}.stage{height:88dvh;width:min(100%,calc(88dvh * 1.3))}.tabs{gap:4px;top:16px}.tab button{min-height:34px}.pg,.lp .pg{padding-top:20px}}
+@media(max-height:680px) and (min-width:761px){.scene{padding-top:24px;padding-bottom:24px}.stage{height:calc(100dvh - 48px);width:min(100%,calc((100dvh - 48px) * 1.44))}.tabs{gap:4px;top:16px}.tab button{min-height:36px}.pg,.lp .pg{padding-top:var(--space-5)}}
 @media(max-width:760px){
  html,body{height:auto;min-height:100%}body{overflow:auto}
- .scene{position:relative;display:block;padding:24px 14px 40px 110px;padding-left:max(110px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));min-height:100dvh;perspective:none}
+ .scene{position:relative;display:block;padding:24px 110px 40px 14px;padding-left:max(14px,env(safe-area-inset-left));padding-right:max(110px,env(safe-area-inset-right));min-height:100dvh;perspective:none}
  .stage{height:auto;width:100%;max-width:none;min-height:calc(100dvh - 64px)}
  .book,.right,.page.show,.face.front,.pg{position:relative;inset:auto}
  .book{min-height:inherit;transform-style:flat}.right{min-height:inherit;z-index:1}.page.show,.face.front{min-height:inherit}
  .left,.edges.l,.gutter,.binding,.entry-cover{display:none}
- .pg{overflow:visible;padding:22px 16px 60px 20px}
- .lhalf{display:block;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid var(--rule)}
+ :root{--bend:0deg}.stage,.right,.edges{transform:none}
+ .pg{overflow:visible;padding:var(--space-5) var(--space-4) 60px var(--space-5)}
  .tabs{top:14px;bottom:auto;width:98px;gap:5px;transform:none;transform-style:flat}.tabs .shade{transform:none;z-index:1}
  .tab{z-index:0}.tab.on{z-index:2;transform:none}
- .tab button{min-height:40px;padding:7px 12px 7px 10px;font-size:11px;letter-spacing:.03em;transform:translateX(6px)}.tab button small{display:none}
- .tab:not(.on) button:active{transform:translateX(4px)}
- .name{font-size:clamp(30px,10vw,40px)}
- .ft{left:20px;right:70px}.no{right:16px}
+ .tab button{min-height:40px;padding:7px 10px 7px 12px;font-size:var(--fs-sm);left:-6px}.tab button small{display:none}
+ .tab:not(.on) button:active{left:-4px}
+ .ft{left:var(--space-5);right:80px}.no{right:var(--space-4)}
  .cells{grid-template-columns:1fr}
 }

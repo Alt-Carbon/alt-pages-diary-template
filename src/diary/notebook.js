@@ -11,6 +11,7 @@
       b.readAt ? Number(b.readAt.slice(0, 4)) : null,
       b.rating === 5 ? 2 : b.rating === 4 ? 1 : 0,
       b.review || "",
+      b.readAt || "",
     ]);
     if (view.syncedAt) { const d = new Date(view.syncedAt); DATA.synced = `${d.getUTCDate()} ${M[d.getUTCMonth()]} ${d.getUTCFullYear()}`; }
   }
@@ -22,6 +23,17 @@
 
 /* ------------------------------------------------------------- helpers */
 const $ = (s, el = document) => el.querySelector(s);
+/* The book is an even number of pixels wide, so each page is a whole number and text sits on the
+   same pixels whether it is on the page or on a leaf in the air (a half-pixel difference showed as a
+   small jump when a leaf landed). --half (notebook.css): the edges and tabs would bow around the wire.
+   Phones keep the fluid width. */
+const setHalf = () => {
+  const stage = $(".stage"), book = $("#book");
+  stage.style.width = "";
+  if (!matchMedia("(max-width:760px)").matches) stage.style.width = Math.floor(stage.getBoundingClientRect().width / 2) * 2 + "px";
+  book.style.setProperty("--half", book.offsetWidth / 2 + "px");
+};
+setHalf(); addEventListener("resize", setHalf);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const staticMode = new URLSearchParams(location.search).has("static");
 if (staticMode) document.documentElement.dataset.static = "";
@@ -36,101 +48,256 @@ const sec = (label, inner) => `<div class="sec">${label ? `<div class="lab">${la
 const table = (heads, rows) => `<table>${heads ? `<thead><tr>${heads.map(h => `<th>${h}</th>`).join("")}</tr></thead>` : ""}<tbody>${rows.join("")}</tbody></table>`;
 const tr = (cells, cls) => `<tr${cls ? ` class="${cls}"` : ""}>${cells.join("")}</tr>`;
 const td = (v, cls) => `<td${cls ? ` class="${cls}"` : ""}>${v}</td>`;
-const sub = (a, n) => `<span class="s">${a}${n ? `. ${esc(n)}` : ""}</span>`;
+const sub = (a, n) => `<span class="s">${a}${n ? `${a ? ". " : ""}${n}` : ""}</span>`;   // the second part is already escaped or is markup
 
-const SECTIONS = [{ id: "home", tab: "Home", desc: "" }, ...DATA.pages.map(([id, tab, desc]) => ({ id, tab, desc }))];
-const PAGES = [...SECTIONS, { id: "essay", tab: DATA.essay.title, hidden: true }];
-const N_PAGES = SECTIONS.length;
-
-/* ------------------------------------------------- left page: the section */
-const INTRO = {
-  research: () => DATA.research.interests.map(p => `<p>${p}</p>`).join(""),
-  publications: () => {
-    const c = {}; for (const p of DATA.pubs) c[p[4]] = (c[p[4]] || 0) + 1;
-    const tally = Object.entries(c).map(([k, n]) => `${n} ${k.toLowerCase()}${n > 1 ? "s" : ""}`).join(", ");
-    return `<p>${tally[0].toUpperCase() + tally.slice(1)}. An asterisk marks the ones I would start with.</p><p>Full list on <a href="https://example.com">Google Scholar</a> and <a href="https://example.com">ORCID</a>.</p>`; },
-  teaching: s => `<p>${esc(s.desc)}.</p><p>I take one or two MSc thesis students a year. Write to me before January.</p>`,
-  questions: () => `<p>${esc(DATA.questionsIntro)}</p>`,
-  reading: () => `<p>What I've been reading, and what I'd pass on.</p><p>Books are synced from my <a href="https://www.goodreads.com/">Goodreads</a> “read” shelf, ${esc(DATA.synced)}. An asterisk marks the ones I would press into your hands.</p>`,
-  now: () => `<p>Updated ${esc(DATA.updated)}.</p><p>This is a <a href="https://nownownow.com/about">now page</a>.</p>`,
-  about: () => `<div class="photo" role="img" aria-label="Photo placeholder">Photo<br>(optional)</div>` + DATA.about.slice(0, 2).map(p => `<p>${p}</p>`).join(""),
+/* ------------------------------------------------ doodles, one a page */
+/* viewBox 0 0 200 150; strokes only, in the page's ink. */
+const DOODLE = {
+  home: `<path d="M46 68c-2 18 0 36 5 54h44c5-18 7-36 5-54z"/><path d="M100 78c18-2 22 20 2 26"/><path d="M62 56c-6-8 6-12 0-20M74 58c-6-8 6-12 0-20M86 56c-6-8 6-12 0-20"/><path d="M118 120l54-38 8 6-54 38zM118 120l-9 9 11-2M166 88l8 6"/><path d="M30 132q70 6 150 0"/>`,
+  writing: `<path d="M66 28c-12 24-16 44-8 66l8 18 8-18c8-22 4-42-8-66z"/><path d="M66 64v36"/><circle cx="66" cy="60" r="3"/><path d="M100 40q40-4 80 0M100 58q30-3 60 0M100 76q36 4 72 0"/><path d="M92 120c8-10 14-10 20 0s12 10 20 0 12-10 20 0 12 10 18 0"/>`,
+  reading: `<path d="M36 104l118-2 1 18-118 2zM44 86l106-1v17l-106 2zM52 70l96-2 1 16-96 2z"/><path d="M48 112l96-1M56 94l86-1"/><path d="M140 86V70l6 4 6-4v16"/><circle cx="84" cy="56" r="10"/><circle cx="112" cy="56" r="10"/><path d="M94 55q4-4 8 0M74 54l-12-4M122 54l12-4"/>`,
+  research: `<path d="M100 28c-24 0-36 18-36 36 0 14 10 22 14 34h44c4-12 14-20 14-34 0-18-12-36-36-36z"/><path d="M80 106h40M82 116h36M88 126h24"/><path d="M100 8v10M60 20l6 8M140 20l-6 8M44 56h10M146 56h10"/><path d="M90 54c0-10 20-12 20 0 0 8-10 8-10 18M100 84v2"/>`,
+  now: `<path d="M78 24c36 0 54 26 54 52s-18 52-54 52-54-26-54-52 18-52 54-52z"/><path d="M78 76V46M78 76l20 12"/><path d="M78 30v6M126 76h-6M78 122v-6M30 76h6"/><path d="M142 92h44v38h-44zM142 104h44M152 86v10M176 86v10"/><path d="M156 114l14 12M170 114l-14 12"/>`,
+  about: `<path d="M100 30c18 0 28 14 28 30s-10 32-28 32-28-16-28-32 10-30 28-30z"/><path d="M76 48c10-10 36-12 48 2"/><circle cx="90" cy="62" r="7"/><circle cx="110" cy="62" r="7"/><path d="M97 62h6M92 78q8 6 16 0"/><path d="M52 134c6-26 24-36 48-36s42 10 48 36"/><path d="M146 126c12-8 16-22 18-36M160 84l4-10M166 86l6-8M172 92l8-5"/><path d="M184 70l6-6M190 82l8-2"/>`,
+  essay: `<path d="M88 40v70c0 14 24 14 24 0V32c0-20-36-20-36 0v84c0 28 48 28 48 0V46"/>`,
 };
-function L(s, i) {
-  if (s.id === "home") return `<div class="meta"><span>Notebook</span><span>Updated ${tdate(DATA.updated)}</span></div>`
-    + `<h1 class="name">${esc(DATA.name)}</h1><p class="role">${esc(DATA.employer)} · ${esc(DATA.place)}</p>`
-    + `<div class="links">${DATA.social.map(([l, h]) => link(l, h)).join("")}</div>`
-    + `<div class="lab">Contents</div>` + table(null, SECTIONS.slice(1).map((t, j) => tr([td(pad(j + 2), "d"), td(link(t.tab, "#" + t.id)), td("p. " + pad(2 * (j + 1) + 1), "k")])));
-  if (s.id === "essay") { const e = DATA.essay;
-    return `<div class="meta"><span>Writing</span><span>${tdate(e.date)}</span></div><h1 class="h">${esc(e.title)}</h1><p>${esc(e.blurb)}</p>`
-      + (e.notes.length ? `<div class="lab" style="margin-top:22px">Notes</div>` + e.notes.map((n, k) => `<p class="fn"><sup>${k + 1}</sup> ${n}</p>`).join("") : ""); }
-  return `<div class="meta"><span>Section ${pad(i + 1)}</span><span>${tdate(DATA.updated)}</span></div><h1 class="h">${esc(s.tab)}</h1>${(INTRO[s.id] || (t => `<p>${esc(t.desc)}.</p>`))(s)}`;
+const INK = "#5d5950"; /* --type-2 */
+const doodleSrc = id => "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 212 162"><filter id="w" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter><g filter="url(#w)" fill="none" stroke="${INK}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${DOODLE[id]}</g></svg>`);
+const doodle = id => DOODLE[id] ? `<figure class="doodle" aria-hidden="true"><img alt="" decoding="sync" src="${doodleSrc(id)}"></figure>` : "";   // sync: drawn in the same frame the page lands
+
+/* ------------------------------------------------------------ sections */
+/* A section is one flat run of blocks. The notebook measures them in a hidden page and
+   lays them over as many pages as they need; every section starts on a fresh spread, so
+   its tab lands on its first page, and the contents page numbers are real.
+   A block is { html, keep, break, optional, g, anchor }. keep: stays with the block after
+   it (headings, labels, group rows). break: starts a new page ("soft": only when less than
+   two fifths of the page is left). optional: dropped rather than carried over (the doodle).
+   g: a group key; consecutive blocks of one group are wrapped as one table or list, and a
+   page may break between its rows. anchor: a hash that opens the page this block lands on. */
+const SECTIONS = [{ id: "home", tab: "Home" }, ...DATA.pages.map(([id, tab]) => ({ id, tab }))];
+const essayId = id => "essay-" + id;
+const B = (html, o) => ({ html, ...o });
+const meta = (a, b) => B(`<div class="meta"><span>${a}</span><span>${b}</span></div>`, { keep: true });
+const head = (t, cls = "h") => B(`<h1 class="${cls}">${esc(t)}</h1>`, { keep: true });
+const lab = t => B(`<div class="lab">${t}</div>`, { keep: true });
+const para = (p, cls) => B(`<p${cls ? ` class="${cls}"` : ""}>${p}</p>`);
+const all = (t, h) => `<a class="all" href="${h}">${t}</a>`;   // sits at the end of a label's rule
+const optional = blocks => blocks.map(b => ({ ...b, optional: true }));   // shown as far as the page has room
+const GROUPS = {};   // key → { open, close }
+let groupSeq = 0;
+const tableRows = (heads, trs) => {
+  const g = "t" + groupSeq++;
+  GROUPS[g] = { open: `<table data-g="${g}">${heads ? `<thead><tr>${heads.map(h => `<th>${h}</th>`).join("")}</tr></thead>` : ""}<tbody>`, close: "</tbody></table>" };
+  return trs.map(r => typeof r === "string" ? B(r, { g }) : { ...r, g });
+};
+const listItems = items => { const g = "l" + groupSeq++; GROUPS[g] = { open: '<ul class="list">', close: "</ul>" }; return items.map(i => B(`<li>${i}</li>`, { g })); };
+const sectionNo = id => `Section ${pad(SECTIONS.findIndex(x => x.id === id) + 1)}`;
+const opener = s => [meta(sectionNo(s.id), tdate(DATA.updated)), head(s.tab)];
+const lnk = links => links.length ? `<span class="lnk">${links.map(([x, u]) => `<a href="${u}">${esc(x)}</a>`).join("")}</span>` : "";
+/* A piece's rendered Markdown, one block per top-level element; headings stay with what follows. */
+const htmlBlocks = html => [...new DOMParser().parseFromString(html, "text/html").body.children].map(el => B(el.outerHTML, { keep: /^H[1-6]$/.test(el.tagName) }));
+const pieceHref = w => w.link || "#" + essayId(w.id);
+const BLOCKS = {
+  home: () => {
+    const latest = DATA.books.filter(b => b[3]).sort((a, b) => b[3] - a[3]).slice(0, 5);
+    const res = DATA.research.items.slice(0, 3);
+    return [
+      meta("Notebook", `Updated ${tdate(DATA.updated)}`),
+      head(DATA.name, "name"), para(`${esc(DATA.employer)} · ${esc(DATA.place)}`, "role"),
+      B(`<div class="links">${DATA.social.map(([l, h]) => link(l, h)).join("")}</div>`),
+      lab("Contents"),
+      ...tableRows(null, SECTIONS.slice(1).map((t, j) => tr([td(pad(j + 2), "d"), td(link(t.tab, "#" + t.id)), td(`<span data-pn="${t.id}">p. 00</span>`, "k")]))),
+      B(`<p class="hi">${esc(DATA.greeting || `Hi, I’m ${DATA.name.split(" ")[0]}.`)}</p>`, { break: true, keep: true }),
+      para(`${esc(DATA.oneLiner)} ${esc(DATA.intro)}`, "lead"),
+      ...(DATA.before ? [para(esc(DATA.before))] : []),
+      ...(DATA.now.length ? [para(`<a href="#now">Now</a>${DATA.now[0][1][0]}`, "nowline")] : []),
+      ...(DATA.writing.length ? [lab(`Writing ${all("View all", "#writing")}`), ...tableRows(null, DATA.writing.slice(0, 4).map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${w.blurb ? sub(esc(w.blurb)) : ""}`)])))] : []),
+      // Home is one spread: what follows is shown as far as the page has room.
+      ...optional([
+        ...(res.length ? [lab(`Research ${all("View all", "#research")}`), ...tableRows(null, res.map(r => tr([td(`${link(r.title, r.url || "#research")}${sub(esc(r.venue || r.kind))}`), td(r.year, "k")])))] : []),
+        ...(latest.length ? [lab(`Books ${all("View all", "#reading")}`), ...tableRows(null, latest.map(([t, a, , y]) => tr([td(`${link(t, bookUrl(t))}${sub(esc(a))}`), td(y, "k")])))] : []),
+      ]),
+    ];
+  },
+  writing: s => [
+    ...opener(s), para(esc(DATA.writingIntro || "Essays and notes.")),
+    ...tableRows(["Date", "Title"], DATA.writing.map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${w.blurb ? sub(esc(w.blurb)) : ""}${w.link ? sub("Published elsewhere") : ""}`)]))),
+    ...DATA.writing.filter(w => w.html).flatMap(w => [
+      B(`<div class="lab">Essay · ${tdate(w.date)}</div>`, { keep: true, break: "soft", anchor: essayId(w.id) }),
+      head(w.title), ...(w.blurb ? [para(esc(w.blurb), "blurb")] : []),
+      ...htmlBlocks(w.html),
+    ]),
+  ],
+  research: s => {
+    const years = [...new Set(DATA.research.items.map(r => r.year))];
+    return [...opener(s), ...(DATA.research.intro ? [para(DATA.research.intro)] : []),
+      ...years.flatMap(y => [lab(String(y)), ...tableRows(null, DATA.research.items.filter(r => r.year === y).map(r =>
+        tr([td(`${link(r.title, r.url)}<span class="s">${r.authors}${r.venue ? ` · <i>${esc(r.venue)}</i>` : ""}${r.note ? ` · ${r.note}` : ""}${lnk(r.links)}</span>`), td(esc(r.kind), "k")])))])];
+  },
+  reading: s => {
+    // A reading log: what is open now, then the last BOOKS finished, by year. A whole shelf would be a
+    // notebook of its own; the rest is on Goodreads.
+    const BOOKS = 24;
+    const open = DATA.books.filter(b => !b[3]).slice(0, 6), read = DATA.books.filter(b => b[3]).sort((a, b) => b[6].localeCompare(a[6])).slice(0, BOOKS);
+    const groups = []; if (open.length) groups.push(["Reading now", open]);
+    for (const b of read) { const y = String(b[3]); const g = groups.find(x => x[0] === y); g ? g[1].push(b) : groups.push([y, [b]]); }
+    const rows = [];
+    for (const [topic, bs] of groups) {
+      rows.push(B(`<tr class="g"><td colspan="2">${esc(topic)}</td></tr>`, { keep: true }));
+      // A review is a line here, not the whole piece.
+      const line = n => { const t = String(n).replace(/\s+/g, " ").trim(); return t.length > 140 ? t.slice(0, 137).replace(/\s+\S*$/, "") + "…" : t; };
+      for (const [t, a, , y, m, n] of bs) rows.push(tr([td(`${m === 2 ? "* " : ""}${link(t, bookUrl(t))}${sub(esc(a), n ? esc(line(n)) : "")}`), td(y || "Open", "k")]));
+    }
+    const more = DATA.books.filter(b => b[3]).length - read.length;
+    return [...opener(s),
+      ...(DATA.reading.intro ? [para(esc(DATA.reading.intro))] : []),
+      para(`Books are synced from my <a href="https://www.goodreads.com/">Goodreads</a> “read” shelf${DATA.synced ? `, ${esc(DATA.synced)}` : ""}. An asterisk marks the ones I would press into your hands.`),
+      ...(rows.length ? [lab("Books"), ...tableRows(null, rows)] : []),
+      ...(more > 0 ? [para(`${more} more on <a href="${DATA.goodreads}">Goodreads</a>.`, "fn")] : []),
+      ...(DATA.reading.links.length ? [lab("Links"), ...tableRows(null, DATA.reading.links.map(l => tr([td(`${link(l.title, l.url)}${sub(esc(l.by), l.note ? l.note : "")}`), td(`${esc(l.kind)}${l.date ? ` · ${esc(l.date)}` : ""}`, "k")])))] : [])];
+  },
+  now: s => [...opener(s), para(`Updated ${esc(DATA.nowUpdated)}. This is a <a href="https://nownownow.com/about">now page</a>.`),
+    ...DATA.now.flatMap(([h, items]) => [lab(h), ...listItems(items)])],
+  about: s => [...opener(s),
+    ...(DATA.photo ? [B(`<figure class="photo"><img src="${DATA.photo}" alt="Photo of ${esc(DATA.name)}" width="400" height="400"></figure>`)] : []),
+    ...DATA.about.map(p => para(p)),
+    ...(DATA.experience.length ? [lab(`Experience ${DATA.cv ? all("CV (PDF)", DATA.cv) : ""}`), ...tableRows(null, DATA.experience.map(e =>
+      tr([td(esc(e.when), "d"), td(`<b>${esc(e.role)}</b>, ${e.orgUrl ? link(e.org, e.orgUrl) : esc(e.org)}${e.summary ? sub(e.summary) : ""}`)])))] : []),
+    ...(DATA.contact ? [lab("Contact"), para(DATA.contact)] : []),
+    ...(DATA.facts.length ? [B(`<div class="cells">${DATA.facts.map(([k, v]) => `<div><b>${esc(k)}</b>${v}</div>`).join("")}</div>`)] : []),
+    ...(DATA.shortBio ? [lab("Short bio"), para(esc(DATA.shortBio))] : [])],
+};
+const blocksFor = s => [...(BLOCKS[s.id] || (t => [...opener(t), para(`${esc(t.desc)}.`)]))(s), ...(DOODLE[s.id] ? [B(doodle(s.id), { optional: true })] : [])];
+
+/* ------------------------------------------------------------ pages */
+/* Consecutive blocks of one group are wrapped as one table or list. */
+function assemble(blocks) {
+  let out = "", open = null;
+  for (const b of blocks) {
+    const g = b.g || null;
+    if (g !== open) { if (open) out += GROUPS[open].close; open = g; if (open) out += GROUPS[open].open; }
+    out += b.html;
+  }
+  if (open) out += GROUPS[open].close;
+  return out;
+}
+/* Lay blocks over pages H tall, measured in the hidden page `box` (a real .pg, so every
+   style applies). Returns [{ html, anchors }]. */
+function paginate(blocks, box, H) {
+  box.scrollTop = 0;
+  box.innerHTML = assemble(blocks.map((b, i) => ({ ...b, html: b.html.replace(/^<([a-z0-9]+)/i, `<$1 data-b="${i}"`) })));
+  const base = box.getBoundingClientRect().top + parseFloat(getComputedStyle(box).paddingTop);
+  const els = box.querySelectorAll("[data-b]");
+  const pos = blocks.map((_, i) => { const r = els[i].getBoundingClientRect(); return [r.top - base, r.bottom - base]; });
+  const headH = {};   // a table continued on a new page repeats its head
+  box.querySelectorAll("table[data-g] thead").forEach(t => headH[t.parentElement.dataset.g] = t.getBoundingClientRect().height);
+  const pages = []; let page = [], start = null;
+  const flush = () => { if (page.length) pages.push(page); page = []; start = null; };
+  let i = 0;
+  while (i < blocks.length) {
+    const b = blocks[i];
+    if (b.break && page.length) {
+      let j = i + 1; while (j < blocks.length && !blocks[j].break) j++;   // the run this block opens
+      if (b.break !== "soft" || pos[j - 1][1] - start > H) flush();
+    }
+    if (start === null) start = pos[i][0] - (b.g ? headH[b.g] || 0 : 0);
+    const fits = pos[i][1] - start <= H;
+    if (fits || !page.length) { page.push(i); i++; continue; }
+    if (b.optional) { if (page.length && blocks[page[page.length - 1]].keep) page.pop(); i++; continue; }
+    let k = page.length; while (k > 0 && blocks[page[k - 1]].keep) k--;
+    if (k === 0) k = page.length;   // a page of nothing but headings still counts
+    const carried = page.splice(k);
+    // The last row of a table or list never stands alone at the top of a page: its neighbour comes too.
+    if (!carried.length && b.g && (i + 1 >= blocks.length || blocks[i + 1].g !== b.g) && page.length > 2
+        && blocks[page[page.length - 1]].g === b.g && blocks[page[page.length - 2]].g === b.g) carried.push(page.pop());
+    flush();
+    if (carried.length) i = carried[0];   // they lead the next page, then this block is tried again
+  }
+  flush();
+  // A section ending on a left page would face a blank one: its last page is shared across the
+  // pair, cut where the two halves come out most even, never after a heading, inside a table or
+  // list, or so that the doodle is alone.
+  if (pages.length % 2) {
+    const last = pages[pages.length - 1];
+    let best = null;
+    for (let c = 1; c < last.length; c++) {
+      const prev = blocks[last[c - 1]], cur = blocks[last[c]];
+      if (prev.keep || (cur.g && cur.g === prev.g) || cur.optional) continue;
+      const hl = pos[last[c - 1]][1] - pos[last[0]][0], hr = pos[last[last.length - 1]][1] - pos[last[c]][0];
+      if (Math.min(hl, hr) < (hl + hr) * .2) continue;   // a sliver on one side is worse than a blank page
+      if (!best || Math.abs(hl - hr) < best[1]) best = [c, Math.abs(hl - hr)];
+    }
+    if (best) pages.splice(pages.length - 1, 1, last.slice(0, best[0]), last.slice(best[0]));
+  }
+  return pages.map(ids => ({ html: assemble(ids.map(j => blocks[j])), anchors: ids.map(j => blocks[j].anchor).filter(Boolean) }));
 }
 
-/* ---------------------------------------------- right page: the records */
-const R = {
-  home: () => {
-    const latest = DATA.books.filter(b => b[3]).sort((a, b) => b[3] - a[3]).slice(0, 7);
-    return `<p class="lead">${esc(DATA.oneLiner)} ${esc(DATA.intro)}</p><p class="nowline"><a href="#now">Now</a>${DATA.now[0][1][0]}</p>`
-      + sec("Writing", table(null, DATA.writing.slice(0, 4).map(([d, t, n]) => tr([td(tdate(d), "d"), td(`${link(t, "#essay")}${n ? sub(esc(n)) : ""}`)]))) + `<a class="all" href="#writing">View all</a>`)
-      + sec("Books", table(null, latest.map(([t, a, , y]) => tr([td(`${link(t, bookUrl(t))}${sub(esc(a))}`), td(y, "k")]))) + `<a class="all" href="#reading">View all</a>`); },
-  research: () => { const r = DATA.research;
-    return sec("Projects", table(["Project", "When"], r.projects.map(([t, n, w]) => tr([td(`${link(t, "https://example.com")}${sub(esc(n))}`), td(w, "k")]))))
-      + sec("Data and code", table(["Name", "Where"], r.data.map(([t, n, w]) => tr([td(`${link(t, "https://example.com")}${sub(esc(n))}`), td(w, "k")]))))
-      + sec("Grants and awards", table(["Year", "Award"], r.grants.map(([y, t, f]) => tr([td(y, "d"), td(`${esc(t)}${sub(esc(f))}`)])))); },
-  publications: () => { let year = 0; const rows = [];
-    for (const [y, t, a, v, k, sel, links] of DATA.pubs) {
-      const names = (a.length > 5 ? [...a.slice(0, 4), "…", a[a.length - 1]] : a).map(n => n === DATA.me ? `<b>${esc(n)}</b>` : esc(n)).join(", ");
-      rows.push(tr([td(y !== year ? y : "", "d"), td(`${link(t, "https://doi.org/10.0000/example")}<span class="s">${names}. <i>${esc(v)}</i><span class="lnk">${links.map(l => `<a href="https://example.com">${esc(l)}</a>`).join("")}</span></span>`, "t"), td(k, "k")], sel ? "sel" : ""));
-      year = y; }
-    return sec("Publications", table(["Year", "Title", "Kind"], rows)); },
-  teaching: () => { const t = DATA.teaching;
-    return sec("Courses", table(["Year", "Course"], t.courses.map(([y, c, w]) => tr([td(y, "d"), td(`${esc(c)}${sub(esc(w))}`)]))))
-      + sec("Students and group", table(["Name", "When"], t.group.map(([n, r, w]) => tr([td(`${esc(n)}${sub(esc(r))}`), td(w, "k")])))); },
-  talks: () => sec("Talks", table(["Date", "Talk"], DATA.talks.map(([d, t, v, l]) => tr([td(tdate(d), "d"), td(`${esc(t)}<span class="s">${esc(v)}<span class="lnk">${l.map(([x, u]) => `<a href="${u}">${esc(x)}</a>`).join("")}</span></span>`)])))),
-  writing: () => sec("Writing", table(["Date", "Title"], DATA.writing.map(([d, t, n]) => tr([td(tdate(d), "d"), td(`${link(t, "#essay")}${n ? sub(esc(n)) : ""}`)])))),
-  reading: () => { const groups = {}; for (const b of DATA.books) (groups[b[2]] ??= []).push(b);
-    const rows = [];
-    for (const [topic, bs] of Object.entries(groups)) { rows.push(`<tr class="g"><td colspan="2">${esc(topic)}</td></tr>`);
-      for (const [t, a, , y, m, n] of bs) rows.push(tr([td(`${m === 2 ? "* " : ""}${link(t, bookUrl(t))}${sub(esc(a), n)}`), td(y || "Unread", "k")])); }
-    return sec("Books", table(null, rows))
-      + sec("Articles", table(null, DATA.articles.map(([t, a, n, d, u]) => tr([td(`${link(t, u)}${sub(esc(a), n)}`), td(d, "k")]))))
-      + sec("Misc", table(null, DATA.misc.map(([t, w, k, n, u]) => tr([td(`${link(t, u)}${sub(esc(w), n)}`), td(k, "k")])))); },
-  questions: () => DATA.questions.map(([q, a]) => sec("", `<p><b>${esc(q)}</b></p>${a ? `<p>${a}</p>` : ""}`)).join(""),
-  now: () => DATA.now.map(([h, items]) => sec(h, `<ul class="list">${items.map(i => `<li>${i}</li>`).join("")}</ul>`)).join(""),
-  about: () => DATA.about.slice(2).map(p => `<p>${p}</p>`).join("")
-    + sec("Contact", `<p>${DATA.contact}</p><div class="cells">${DATA.facts.map(([k, v]) => `<div><b>${esc(k)}</b>${v}</div>`).join("")}</div>`)
-    + sec("Short bio", `<p>${DATA.shortBio}</p>`) + sec("Colophon", `<p>${DATA.colophon}</p>`),
-  essay: () => { const e = DATA.essay, others = DATA.writing.map(w => w[1]).filter(t => t !== e.title).slice(0, 3);
-    return e.paras.map(p => `<p>${p}</p>`).join("") + `<p class="more">More writing: ${others.map(t => `<a href="#writing">${esc(t)}</a>`).join("")}<a href="#writing">All writing →</a></p>`; },
-};
-
-/* --------------------------------------------------------------- build */
-const FLAG = ["#dbd9be", "#c6d1c7", "#d5cec1", "#d9d5aa", "#becdcb", "#cbd1b8", "#d1c7bf", "#c6cdbd", "#d8cbb8"];
+/* ----------------------------------------------------------- build */
+/* PAGES are the leaves: each has a left page (its back, seen when the leaf before it is
+   turned) and a right page (its front). ANCHOR maps every hash to the leaf that shows it. */
+let PAGES = [], pageEls = {}, ANCHOR = {};
+const idx = id => PAGES.findIndex(p => p.id === id);
+const FLAG = ["#e9dcbf", "#e2d2ae", "#dbc9a3", "#e6d8ba", "#dfcfa9", "#ecdfc5", "#d8c59c"];
 $("#tabs").innerHTML = '<li class="shade" role="presentation" aria-hidden="true"></li>' + SECTIONS.map((s, i) =>
   `<li class="tab" role="presentation"><button role="tab" id="tab-${s.id}" aria-controls="page-${s.id}" data-id="${s.id}" style="--c:${FLAG[i % FLAG.length]}"><small>${pad(i + 1)}</small><span>${esc(s.tab)}</span></button></li>`).join("");
 
-$("#pages").innerHTML = PAGES.map((s, i) => `
-  <section class="page" id="page-${s.id}" role="tabpanel" ${s.hidden ? 'aria-label="Essay"' : `aria-labelledby="tab-${s.id}"`} tabindex="0">
-    <div class="face front"><div class="pg"><div class="lhalf">${L(s, i)}</div>${R[s.id]()}</div>
+function build() {
+  const paged = !matchMedia("(max-width:760px)").matches;   // a phone scrolls each section instead
+  const leaves = [], firstPage = {};
+  let n = 0;
+  if (paged) {
+    const m = document.createElement("section"); m.className = "page measure"; m.setAttribute("aria-hidden", "true");
+    m.innerHTML = '<div class="face front"><div class="pg"></div></div>';
+    $("#pages").append(m);
+    const box = $(".pg", m), cs = getComputedStyle(box);
+    const H = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    for (const s of SECTIONS) {
+      const pages = paginate(blocksFor(s), box, H);
+      firstPage[s.id] = n + 1;
+      for (let q = 0; q < pages.length; q += 2) leaves.push({ section: s.id, left: pages[q], right: pages[q + 1] || { html: "", anchors: [] } });
+      n += pages.length + pages.length % 2;
+    }
+    m.remove();
+  } else {
+    for (const s of SECTIONS) { firstPage[s.id] = n + 1; leaves.push({ section: s.id, left: { html: "", anchors: [] }, right: { html: assemble(blocksFor(s)), anchors: [] } }); n += 2; }
+  }
+  const pn = html => html.replace(/data-pn="([a-z0-9-]+)">p\. 00/g, (_, id) => `data-pn="${id}">p. ${pad(firstPage[id])}`);
+  ANCHOR = {};
+  const count = {};
+  PAGES = leaves.map(l => {
+    const k = count[l.section] = (count[l.section] || 0) + 1;
+    const id = k === 1 ? l.section : `${l.section}-${k}`;
+    ANCHOR[id] = id; if (k === 1) ANCHOR[l.section] = id;
+    for (const a of [...l.left.anchors, ...l.right.anchors]) ANCHOR[a] ??= id;
+    for (const m of (l.left.html + l.right.html).matchAll(/ id="([^"]+)"/g)) ANCHOR[m[1]] ??= id;
+    return { id, section: l.section, left: pn(l.left.html), right: pn(l.right.html) };
+  });
+  $("#pages").innerHTML = PAGES.map((p, i) => `
+  <section class="page" id="page-${p.id}" role="tabpanel" aria-labelledby="tab-${p.section}" tabindex="0">
+    <div class="face front"><div class="pg">${p.right}</div>
       <span class="no">${pad(2 * i + 2)}</span>
       <div class="ft"><button data-prev>← Prev</button><button data-next>Next →</button></div></div>
     <div class="under"></div>
   </section>`).join("");
+  pageEls = Object.fromEntries(PAGES.map(p => [p.id, $("#page-" + p.id)]));
+  $("#lp").dataset.pageIndex = "-1";   // no left page drawn yet
+}
 
-/* What the left page shows for a section. The last leaf's back is blank. */
-const leftHTML = i => i < PAGES.length ? `<div class="pg">${L(PAGES[i], i)}</div><span class="no">${pad(2 * i + 1)}</span>` : `<div class="pg"></div>`;
+/* What the left page shows for leaf i. The last leaf's back is blank. */
+const leftHTML = i => i < PAGES.length ? `<div class="pg">${PAGES[i].left}</div><span class="no">${pad(2 * i + 1)}</span>` : `<div class="pg"></div>`;
 function setLeft(id) { $("#lp").innerHTML = leftHTML(idx(id)); $("#lp").dataset.pageIndex = idx(id); }
 
 /* ---------------------------------------------------------------- turn */
-const pageEls = Object.fromEntries(PAGES.map(p => [p.id, $("#page-" + p.id)]));
-const idx = id => PAGES.findIndex(p => p.id === id);
 let current = null;
 
 /* Local tangent angles along a flexible leaf. The bend begins near the
    fore-edge and travels inward. Unlike sin(2πt), its envelope stays strong
    halfway through the turn, when the curved silhouette is most visible. */
-function pose(t, N) {
-  const rotation = 180 * t;
+/* The halves bow up from the wire by --bend (notebook.css), so a leaf starts at the right page's
+   angle and lands at the left page's, a little short of a flat half turn. */
+const bendDeg = () => parseFloat(getComputedStyle($("#book")).getPropertyValue("--bend")) || 0;
+function pose(t, N, b = 0) {
+  const rotation = b + (180 - 2 * b) * t;
   const bend = 82 * Math.sin(Math.PI * t);
   const crease = .82 - .58 * t;
   const tangent = x => {
@@ -157,23 +324,25 @@ function run(ms, onUpdate, onDone) {
 
 /* Build the strips for the leaf `page`, whose back is the left page `backIndex`. W is the page width; `page` may be hidden. */
 function buildSheet(page, backIndex, W, N) {
-  const face = $(".face.front", page), w = W / N;
+  // Strip edges are whole pixels, so every slice of text is drawn where the page draws it.
+  const face = $(".face.front", page), edge = i => Math.round(i * W / N);
   const scroll = $(".pg", face).scrollTop;
   const backScroll = backIndex === Number($("#lp").dataset.pageIndex) ? $("#lp .pg").scrollTop : 0;
   const root = document.createElement("div"); root.className = "sheet3d"; root.inert = true; root.setAttribute("aria-hidden", "true");
   const back = document.createElement("div"); back.className = "face lp"; back.innerHTML = leftHTML(backIndex); back.style.width = W + "px";
   const strips = []; let parent = root;
   for (let i = 0; i < N; i++) {
-    const s = document.createElement("div"); s.className = "strip"; s.style.left = (i ? w : 0) + "px"; s.style.width = (w + .7) + "px";
+    const w = edge(i + 1) - edge(i);
+    const s = document.createElement("div"); s.className = "strip"; s.style.left = (i ? edge(i) - edge(i - 1) : 0) + "px"; s.style.width = (w + .7) + "px";
     const cf = document.createElement("div"); cf.className = "cut front";
-    const clone = face.cloneNode(true); clone.classList.add("clone"); clone.style.width = W + "px"; clone.style.left = (-i * w) + "px"; clone.setAttribute("inert", "");
+    const clone = face.cloneNode(true); clone.classList.add("clone"); clone.style.width = W + "px"; clone.style.left = -edge(i) + "px"; clone.setAttribute("inert", "");
     cf.append(clone);
     const cb = document.createElement("div"); cb.className = "cut back";
     // Mirror around the true strip width, not its anti-alias overlap.
     // Using the enlarged box's center shifted the back by .7px on landing.
     cb.style.transformOrigin = "0 50%";
     cb.style.transform = `translateX(${w}px) rotateY(180deg)`;
-    const bc = back.cloneNode(true); bc.style.left = -(W - (i + 1) * w) + "px"; cb.append(bc);
+    const bc = back.cloneNode(true); bc.style.left = -(W - edge(i + 1)) + "px"; cb.append(bc);
     const lf = document.createElement("div"); lf.className = "lt"; const lb = lf.cloneNode();
     cf.append(lf); cb.append(lb); s.append(cf, cb); parent.append(s); parent = s;
     strips.push({ el: s, lf, lb });
@@ -185,12 +354,13 @@ function buildSheet(page, backIndex, W, N) {
   root.querySelectorAll(".cut.front .pg").forEach(el => el.scrollTop = scroll);
   root.querySelectorAll(".cut.back .pg").forEach(el => el.scrollTop = backScroll);
   strips.forEach(({lf, lb}) => {
-    lf.style.background = "linear-gradient(90deg, #182014dd, #182014bb)";
-    lb.style.background = "linear-gradient(270deg, #182014dd, #182014bb)";
+    lf.style.background = "linear-gradient(90deg, #1a1410dd, #1a1410bb)";
+    lb.style.background = "linear-gradient(270deg, #1a1410dd, #1a1410bb)";
   });
   const dark = phi => (.4 * (1 - Math.abs(Math.cos(phi * Math.PI / 180)))).toFixed(3);
+  const b = bendDeg();
   return { root, back, apply(t) {
-    const P = pose(t, N);
+    const P = pose(t, N, b);
     strips.forEach((s, i) => {
       const [a, p0, p1] = P[i]; s.el.style.transform = `rotateY(${-a}deg)`;
       const d0 = dark(p0), d1 = dark(p1);
@@ -201,29 +371,28 @@ function buildSheet(page, backIndex, W, N) {
 }
 
 function setChrome(id) {
-  const selected = id === "essay" ? "writing" : id;
+  const i = idx(id), selected = PAGES[i].section;
   document.querySelectorAll(".tab").forEach(t => {
     const b = $("button", t), on = b.dataset.id === selected;
     t.classList.toggle("on", on); b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1;
   });
-  const i = idx(id);
   $("[data-prev]", pageEls[id]).disabled = i === 0;
-  $("[data-next]", pageEls[id]).disabled = i >= N_PAGES - 1;
-  document.title = `${PAGES[i].tab} — ${DATA.name}`;
+  $("[data-next]", pageEls[id]).disabled = i >= PAGES.length - 1;
+  document.title = `${SECTIONS.find(s => s.id === selected).tab} — ${DATA.name}`;
 }
 
 let finishTurn = null, finishEntry = null, navigationVersion = 0, destination = null;
-/* Every section is one leaf. Moving one section turns one leaf. Jumping several
-   turns each leaf in between, staggered, the way a thumb riffles through a pad,
-   forward or back. The essay is a detail view and always turns as one leaf. */
+/* Moving one leaf turns one leaf. Jumping several turns each leaf in between, staggered,
+   the way a thumb riffles through a pad, forward or back. Past RIFFLE leaves only a sample
+   of them moves (a thumb skips most of a thick pad), each landing as the pile it joins. */
+const RIFFLE = 6;
 function leavesBetween(from, id) {
   const a = idx(from), b = idx(id), forward = b > a;
-  if (id === "essay" || from === "essay") return [forward ? { page: pageEls[from], back: b } : { page: pageEls[id], back: a }];
-  const seq = [];
-  if (forward) for (let j = a; j < b; j++) seq.push({ page: pageEls[PAGES[j].id], back: j + 1 });
-  else for (let j = a - 1; j >= b; j--) seq.push({ page: pageEls[PAGES[j].id], back: j + 1 });
-  return seq;
+  let js = []; if (forward) for (let j = a; j < b; j++) js.push(j); else for (let j = a - 1; j >= b; j--) js.push(j);
+  if (js.length > RIFFLE) js = Array.from({ length: RIFFLE }, (_, q) => js[Math.round(q * (js.length - 1) / (RIFFLE - 1))]);
+  return js.map((j, q) => ({ page: pageEls[PAGES[j].id], back: forward ? (q + 1 < js.length ? js[q + 1] : b) : (q ? js[q - 1] : a) }));
 }
+
 function turnTo(id, animate = true, onDone = () => {}) {
   if (!pageEls[id]) return;
   if (id === current) { onDone(); return; }
@@ -256,7 +425,7 @@ function turnTo(id, animate = true, onDone = () => {}) {
   const total = (k - 1) * stagger + duration;
   // Measure an incoming leaf without exposing its flat face above the current one.
   next.classList.add("show"); next.style.zIndex = 0; prev.style.zIndex = 2;
-  const W = $(".face.front", flat).getBoundingClientRect().width;
+  const W = $(".face.front", flat).offsetWidth; // layout width: the halves are bent and the stage tilted, so a bounding box would be wrong
   const stripCount = k === 1 ? 24 : 12;   // a riffle moves fast; fewer strips keep it smooth
   const sheets = [];
   const build = o => {
@@ -306,6 +475,7 @@ function turnTo(id, animate = true, onDone = () => {}) {
     const last = sheets[k - 1];
     sheets.forEach((s, o) => { if (o < k - 1) s.remove(); });
     last?.apply(forward ? 1 : 0);
+    last?.root.classList.remove("riffle");   // at rest it gets its grain back, so the page under it is the same picture
     settle(forward && last ? last.back : null);
     tintR.style.opacity = 0; tintL.style.opacity = 0;
     if (!continueRoute || !last) { cleanup(false); if (continueRoute) onDone(); return; }
@@ -334,16 +504,17 @@ function turnTo(id, animate = true, onDone = () => {}) {
     });
   });
 }
-/* Jump to the requested section with one interruptible turn. */
-function flipTo(id, animate = true, push = true) {
-  if (!pageEls[id]) return;
+/* Open whatever `target` names, a section, a leaf or a piece, with one interruptible turn. */
+function flipTo(target, animate = true, push = true) {
+  const id = ANCHOR[target];
+  if (!id) return;
   finishEntry?.();
   const version = ++navigationVersion;
   finishTurn?.();
   destination = id;
   if (push && matchMedia("(max-width:760px)").matches) window.scrollTo({top: 0, behavior: "instant"});
   setChrome(id);
-  if (push && location.hash !== "#" + id) history.pushState(null, "", "#" + id);
+  if (push && location.hash !== "#" + target) history.pushState(null, "", "#" + target);
   const book = $("#book");
   const canAnimate = animate && !reducedMotion() && !matchMedia("(max-width:760px)").matches;
   book.setAttribute("aria-busy", String(canAnimate && current !== null && current !== id));
@@ -351,9 +522,8 @@ function flipTo(id, animate = true, push = true) {
   turnTo(id, canAnimate, complete);
 }
 function movePage(direction, animate = true) {
-  if ((destination || current) === "essay") return flipTo("writing", animate);
-  const target = Math.max(0, Math.min(N_PAGES - 1, idx(destination || current) + direction));
-  flipTo(SECTIONS[target].id, animate);
+  const target = Math.max(0, Math.min(PAGES.length - 1, idx(destination || current) + direction));
+  flipTo(PAGES[target].id, animate);
 }
 
 /* ------------------------------------------------------------- wiring */
@@ -362,27 +532,45 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-next]")) { movePage(1, e.detail !== 0); return; }
   if (e.target.closest("[data-prev]")) { movePage(-1, e.detail !== 0); return; }
   const a = e.target.closest('a[href^="#"]');
-  if (a && pageEls[a.hash.slice(1)]) { e.preventDefault(); flipTo(a.hash.slice(1), e.detail !== 0); }
+  if (a && ANCHOR[a.hash.slice(1)]) { e.preventDefault(); flipTo(a.hash.slice(1), e.detail !== 0); }
 });
 addEventListener("keydown", e => {
   if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest('input,textarea,select,[contenteditable="true"]')) return;
   const tab = e.target.closest('[role="tab"]');
   if (tab && ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
     e.preventDefault();
-    const i = SECTIONS.findIndex(s => s.id === tab.dataset.id);
-    const target = e.key === "Home" ? 0 : e.key === "End" ? N_PAGES - 1 : (i + (["ArrowRight", "ArrowDown"].includes(e.key) ? 1 : -1) + N_PAGES) % N_PAGES;
+    const i = SECTIONS.findIndex(s => s.id === tab.dataset.id), N = SECTIONS.length;
+    const target = e.key === "Home" ? 0 : e.key === "End" ? N - 1 : (i + (["ArrowRight", "ArrowDown"].includes(e.key) ? 1 : -1) + N) % N;
     flipTo(SECTIONS[target].id, false); $("#tab-" + SECTIONS[target].id).focus(); return;
   }
   if (["ArrowRight", "ArrowLeft"].includes(e.key)) { e.preventDefault(); movePage(e.key === "ArrowRight" ? 1 : -1, false); }
 });
-const fromHash = () => pageEls[location.hash.slice(1)] ? location.hash.slice(1) : "home";
+const fromHash = () => ANCHOR[location.hash.slice(1)] ? location.hash.slice(1) : "home";
 addEventListener("popstate", () => flipTo(fromHash(), false, false));
 addEventListener("hashchange", () => flipTo(fromHash(), false, false));
 const settleMotion = () => { finishEntry?.(); if (destination) flipTo(destination, false, false); };
 addEventListener("resize", settleMotion);
 motionPreference.addEventListener("change", settleMotion);
+/* The pages depend on the page size, so a real resize lays the notebook out again and reopens
+   the same place (the hash if it still exists, else the section). */
+let size = [innerWidth, innerHeight], resizeTimer = null;
+addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (innerWidth === size[0] && innerHeight === size[1]) return;
+    size = [innerWidth, innerHeight];
+    finishEntry?.(); finishTurn?.();
+    const section = PAGES[idx(destination || current)]?.section || "home";
+    build(); current = null; destination = null;
+    flipTo(ANCHOR[location.hash.slice(1)] ? location.hash.slice(1) : section, false, false);
+  }, 150);
+});
 
 /* --------------------------------------------------------------- entry */
+await document.fonts.ready;   // the pages are measured, so the faces must be the final ones
+build();
+flipTo(fromHash(), false, false);
+
 flipTo(fromHash(), false, false);
 /* The closed notebook arrives from below right, then opens around the wire spine.
    Native animations are cancelled cleanly on input, resize or reduced motion. */
@@ -393,7 +581,7 @@ function openNotebook() {
   // Outside, a plain cover. Inside, the first left page itself.
   cover.innerHTML = `<div class="face front"><div class="pg"><div class="meta"><span>Notebook</span><span>Updated ${tdate(DATA.updated)}</span></div><h1 class="name">${esc(DATA.name)}</h1><p class="role">${esc(DATA.employer)} · ${esc(DATA.place)}</p></div></div><div class="face lp entry-back">${leftHTML(0)}</div>`;
   book.append(cover); book.classList.add("entering");
-  const shift = -book.getBoundingClientRect().width / 4;
+  const shift = -book.offsetWidth / 4;
   const animations = [];
   let finished = false;
   finishEntry = () => {
@@ -412,7 +600,8 @@ function openNotebook() {
     const frames = Array.from({length:61}, (_, i) => easeInOut(i / 60));
     const timing = {duration:MOTION.opening,easing:"linear",fill:"both"};
     const center = book.animate(frames.map(t => ({transform:`translateX(${shift * (1 - t)}px)`})), timing);
-    const opening = cover.animate(frames.map(t => ({transform:`rotateY(${-180 * t}deg)`})), timing);
+    const b = bendDeg();
+    const opening = cover.animate(frames.map(t => ({transform:`rotateY(${-(b + (180 - 2 * b) * t)}deg)`})), timing);
     // The board and bottom edge grow leftward under the cover as it reaches across; the
     // spine shading, left edge and tabs come in with it rather than appearing at once.
     const reach = frames.map(t => ({clipPath:`inset(0 0 0 ${50 * (1 - Math.max(0, -Math.cos(Math.PI * t)))}%)`}));

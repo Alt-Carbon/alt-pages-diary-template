@@ -7,4 +7,6 @@ export default defineConfig({
   build: { format: "file" },
   trailingSlash: "never",
   compressHTML: true,
+  // Code in essays, coloured for the paper (the notebook has no dark mode).
+  markdown: { shikiConfig: { theme: "github-light-high-contrast" } },
 });
