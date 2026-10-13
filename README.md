@@ -32,3 +32,7 @@ No separate addresses per section or piece: sections are tabs at `/#now`, `/#abo
 ## Updates
 
 When this template changes, the Alt Pages dashboard opens a pull request on your repository with the changed files. Your content and settings are never part of it.
+
+## Posts from Medium and Substack
+
+Set a Medium handle or address and a Substack address under Site settings, and the Worker reads their public RSS feeds (`medium.com/feed/@handle`, `<name>.substack.com/feed`) every 12 hours, keeps the newest posts in KV, and serves them at `/writing/elsewhere.json` (`src/worker/core/posts.js` parses, `posts-store.js` runs a sync, `posts-object.js` is the Durable Object with the alarm; all shared with the Sidebar template). The newest posts join the writing list in the browser, each with a small chip saying where it lives and a link to the post there. A feed that fails keeps its last good posts. Medium shares its 10 newest stories and Substack its 20 newest posts, so older pieces still need an entry under Writing with "Published elsewhere" set; those get the same chip. Posts to leave out are listed under Writing page → Posts to leave out. With nothing set, the sample posts in `public/writing/elsewhere.json` are served, regenerated with `npm run sample:posts`. `GET /writing/elsewhere/status` reports the last run; `POST /writing/elsewhere/sync` asks for one now.

@@ -1,9 +1,11 @@
 
-/* ------------------------------------------------- books, from the sync */
+/* ------------------------------------------- books and posts, from the syncs */
 {
-  const view = await fetch("/reading/view.json", { headers: { accept: "application/json" } }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const get = (u) => fetch(u, { headers: { accept: "application/json" } }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const [view, posts] = await Promise.all([get("/reading/view.json"), get("/writing/elsewhere.json")]);
   const human = (s) => s.replace(/[-_]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
   const M = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+  const when = (iso) => { const d = new Date(iso); return `${d.getUTCDate()} ${M[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
   if (view && (view.read?.length || view.reading?.length)) {
     DATA.books = [...(view.reading || []), ...(view.read || [])].map((b) => [
       b.title, b.author,
@@ -13,7 +15,22 @@
       b.review || "",
       b.readAt || "",
     ]);
-    if (view.syncedAt) { const d = new Date(view.syncedAt); DATA.synced = `${d.getUTCDate()} ${M[d.getUTCMonth()]} ${d.getUTCFullYear()}`; }
+    if (view.syncedAt) DATA.synced = when(view.syncedAt);
+  }
+  // Posts on Medium and Substack join the writing, newest first, minus the ones left out in the editor.
+  if (posts?.posts?.length) {
+    const norm = (u) => String(u || "").trim().replace(/^https?:\/\/(www\.)?/, "").replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+    const out = new Set((DATA.hide || []).map(norm));
+    const WHERE = { medium: "Medium", substack: "Substack" };
+    for (const p of posts.posts) {
+      if (!p.date || out.has(norm(p.url))) continue;
+      DATA.writing.push({ id: "x-" + p.id.replace(/[^\w-]/g, "-"), iso: p.date, date: when(p.date + "T00:00:00Z"), title: p.title, blurb: p.blurb || "", link: p.url, where: WHERE[p.source] || p.source, html: "" });
+    }
+    DATA.writing.sort((a, b) => (b.iso || "").localeCompare(a.iso || ""));
+    if (!posts.sample && posts.syncedAt) {
+      DATA.postsSynced = when(posts.syncedAt);
+      DATA.postsFrom = Object.entries(posts.sources || {}).filter(([, s]) => s).map(([k, s]) => [WHERE[k] || k, s.url]);
+    }
   }
 }
 
@@ -97,6 +114,7 @@ const lnk = links => links.length ? `<span class="lnk">${links.map(([x, u]) => `
 /* A piece's rendered Markdown, one block per top-level element; headings stay with what follows. */
 const htmlBlocks = html => [...new DOMParser().parseFromString(html, "text/html").body.children].map(el => B(el.outerHTML, { keep: /^H[1-6]$/.test(el.tagName) }));
 const pieceHref = w => w.link || "#" + essayId(w.id);
+const where = w => w.where ? ` <span class="tag">${esc(w.where)}</span>` : "";   // the chip beside a piece that lives on another site
 const BLOCKS = {
   home: () => {
     const latest = DATA.books.filter(b => b[3]).sort((a, b) => b[3] - a[3]).slice(0, 5);
@@ -111,7 +129,7 @@ const BLOCKS = {
       para(`${esc(DATA.oneLiner)} ${esc(DATA.intro)}`, "lead"),
       ...(DATA.before ? [para(esc(DATA.before))] : []),
       ...(DATA.now.length ? [para(`<a href="#now">Now</a>${DATA.now[0][1][0]}`, "nowline")] : []),
-      ...(DATA.writing.length ? [lab(`Writing ${all("View all", "#writing")}`), ...tableRows(null, DATA.writing.slice(0, 4).map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${w.blurb ? sub(esc(w.blurb)) : ""}`)])))] : []),
+      ...(DATA.writing.length ? [lab(`Writing ${all("View all", "#writing")}`), ...tableRows(null, DATA.writing.slice(0, 4).map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${where(w)}${w.blurb ? sub(esc(w.blurb)) : ""}`)])))] : []),
       // Home is one spread: what follows is shown as far as the page has room.
       ...optional([
         ...(res.length ? [lab(`Research ${all("View all", "#research")}`), ...tableRows(null, res.map(r => tr([td(`${link(r.title, r.url || "#research")}${sub(esc(r.venue || r.kind))}`), td(r.year, "k")])))] : []),
@@ -121,7 +139,8 @@ const BLOCKS = {
   },
   writing: s => [
     ...opener(s), para(esc(DATA.writingIntro || "Essays and notes.")),
-    ...tableRows(["Date", "Title"], DATA.writing.map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${w.blurb ? sub(esc(w.blurb)) : ""}${w.link ? sub("Published elsewhere") : ""}`)]))),
+    ...(DATA.postsFrom?.length ? [para(`Posts on ${DATA.postsFrom.map(([n, u]) => link(n, u)).join(" and ")} are synced from there${DATA.postsSynced ? `, ${esc(DATA.postsSynced)}` : ""}.`)] : []),
+    ...tableRows(["Date", "Title"], DATA.writing.map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${where(w)}${w.blurb ? sub(esc(w.blurb)) : ""}`)]))),
     ...DATA.writing.filter(w => w.html).flatMap(w => [
       B(`<div class="lab">Essay · ${tdate(w.date)}</div>`, { keep: true, break: "soft", anchor: essayId(w.id) }),
       head(w.title), ...(w.blurb ? [para(esc(w.blurb), "blurb")] : []),

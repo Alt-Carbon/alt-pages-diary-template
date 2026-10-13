@@ -85,6 +85,8 @@ th{text-align:left;font-size:var(--fs-2xs);padding:0 var(--space-2) var(--space-
 td{vertical-align:top;padding:6px var(--space-2) 6px 0;border-bottom:1px solid var(--rule-2)}tr:last-child td{border-bottom:0}td:last-child,th:last-child{padding-right:0}
 td.d{width:17%;font:var(--fs-sm)/var(--lh-normal) var(--font-ui);font-variant-numeric:tabular-nums;color:var(--type-2);white-space:nowrap;padding-top:8px} /* 2px over the row padding: optical, dates sit on the title's baseline */
 td.k{text-align:right;white-space:nowrap;padding-top:8px}
+/* The chip beside a piece that lives on another site: Medium, Substack, or the host. */
+.tag{display:inline-block;margin-left:var(--space-2);padding:0 var(--space-2);border:1px solid var(--rule-2);border-radius:999px;font:var(--fs-xs)/1.6 var(--font-ui);color:var(--type-2);vertical-align:1px;white-space:nowrap}
 td .s{display:block;font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--type-2);margin-top:2px}td .s i{font-style:italic}
 td a{text-decoration:none}td a:hover{text-decoration:underline}
 tr.sel td.t::before{content:"* "}

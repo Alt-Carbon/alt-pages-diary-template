@@ -9,7 +9,7 @@ import "@fontsource-variable/geist/wght-italic.css";
 import "@fontsource-variable/eb-garamond/wght.css";
 import css from "../diary/notebook.css?raw";
 import notebook from "../diary/notebook.js?raw";
-import { about, currentRole, day, freshness, inline, markMe, monthYear, now, origin, owner, pages, reading, repo, research, shown, site, summary, template, writing, writingPage, years } from "../lib/content";
+import { about, currentRole, day, freshness, inline, markMe, monthYear, now, origin, owner, pages, reading, repo, research, shown, site, summary, template, whereIs, writing, writingPage, years } from "../lib/content";
 
 const posts = await writing();
 const fresh = await freshness();
@@ -35,8 +35,9 @@ const DATA = {
   about: about.paragraphs.map(inline), contact: inline(about.contact), shortBio: about.shortBio, cv: about.cv,
   facts: about.facts.map((f) => [f.label, inline(f.value)]),
   experience: about.experience.map((e) => ({ role: e.role, org: e.org, orgUrl: e.orgUrl, when: years(e), summary: inline(e.summary) })),
-  writingIntro: writingPage.intro,
-  writing: posts.map((p) => ({ id: p.id, date: day(p.data.date), title: p.data.title, blurb: p.data.blurb || "", link: p.data.link || "", html: html(p) })),
+  writingIntro: writingPage.intro, hide: writingPage.hide,
+  // `where` is the chip beside a piece that lives on another site; posts synced from Medium and Substack join this list in the browser.
+  writing: posts.map((p) => ({ id: p.id, iso: p.data.date.toISOString().slice(0, 10), date: day(p.data.date), title: p.data.title, blurb: p.data.blurb || "", link: p.data.link || "", where: p.data.link ? whereIs(p.data.link) : "", html: html(p) })),
   research: { intro: research.intro, items: [...research.items].sort((a, b) => b.year - a.year).map((r) => ({ ...r, authors: markMe(r.authors), note: inline(r.note), links: r.links.map((l) => [l.label, l.url]) })) },
   reading: { intro: reading.intro, links: reading.links.map((l) => ({ title: l.title, by: l.by, kind: l.kind, date: l.date ? monthYear(l.date) : "", note: inline(l.note), url: l.url })) },
   books: [], synced: "", goodreads: site.goodreads.trim() || "https://www.goodreads.com/",
