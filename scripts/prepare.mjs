@@ -128,7 +128,7 @@ singletons:
       - { label: Employer, name: employer, widget: string, required: false }
       - { label: Employer link, name: employerUrl, widget: string, required: false }
       - { label: Photo, name: photo, widget: image, required: false, hint: "Shown on the About page." }${links("social", "Social links", "Email first, as mailto:you@example.com")}
-      - { label: Accent colour, name: accent, widget: select, default: aerospace-orange, hint: "Used for the favicon and the link-preview cards.", options: [ ${accents.map((a) => `{ label: "${a.label}", value: ${a.id} }`).join(", ")} ] }
+      - { label: Accent colour, name: accent, widget: select, default: aerospace-orange, hint: "Used for the favicon and the link-preview cards.", options: [ ${accents.map((a) => `{ label: "${a.label}", value: ${a.id}, color: "${a.light}" }`).join(", ")} ] }
       - { label: Goodreads profile, name: goodreads, widget: string, required: false, hint: "${sampleWarning}Paste your Goodreads profile address. Your 'read' and 'currently reading' shelves appear on the Reading page. The profile must be public." }
       - { label: Medium, name: medium, widget: string, required: false, hint: "${postsWarning}Your Medium profile address or @handle (a publication works too). Your newest stories join the Writing page with a small Medium chip, each linking to the story on Medium. Medium only shares the latest 10." }
       - { label: Substack, name: substack, widget: string, required: false, hint: "${postsWarning}Your Substack address, e.g. yourname.substack.com or your own domain. Your newest posts join the Writing page with a small Substack chip, each linking to the post. Substack shares the latest 20." }
