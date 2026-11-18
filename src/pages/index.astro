@@ -44,7 +44,7 @@ const html = (p: (typeof posts)[number]) => (p.data.link ? "" : unique(p.id, p.r
 
 const DATA = {
   name: site.name, greeting: site.greeting, employer: site.employer, employerUrl: site.employerUrl, place: site.place, photo: site.photo,
-  updated: day(fresh.date), oneLiner: site.oneLiner, intro: site.intro, before,
+  updated: day(fresh.date), oneLiner: site.oneLiner, before,
   social: site.social.map((l) => [l.label, l.url]),
   pages: tabs,
   // Your pages: the title is the tab's, then the photo and the Markdown, rendered as an essay's is.
@@ -64,7 +64,7 @@ const DATA = {
 const script = `const DATA = ${JSON.stringify(DATA).replace(/</g, "\\u003c")};\n${notebook}`;
 
 // SEO and link previews, as in the Sidebar's Base layout: one page, so one card.
-const description = `${site.oneLiner} ${site.intro}`.trim();
+const description = site.oneLiner;
 const base = origin(Astro.url);
 const url = base + "/";
 const img = base + "/og/home.png";

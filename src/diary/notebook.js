@@ -128,7 +128,7 @@ const BLOCKS = {
       lab("Contents"),
       ...tableRows(null, SECTIONS.slice(1).map((t, j) => tr([td(pad(j + 2), "d"), td(link(t.tab, "#" + t.id)), td(`<span data-pn="${t.id}">p. 00</span>`, "k")]))),
       B(`<p class="hi">${esc(DATA.greeting || `Hi, I’m ${DATA.name.split(" ")[0]}.`)}</p>`, { break: true, keep: true }),
-      para(`${esc(DATA.oneLiner)} ${esc(DATA.intro)}`, "lead"),
+      para(esc(DATA.oneLiner), "lead"),
       ...(DATA.before ? [para(esc(DATA.before))] : []),
       ...(DATA.now.length ? [para(`<a href="#now">Now</a>${DATA.now[0][1][0]}`, "nowline")] : []),
       ...(DATA.writing.length ? [lab(`Writing ${all("View all", "#writing")}`), ...tableRows(null, DATA.writing.slice(0, 4).map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${where(w)}${w.blurb ? sub(esc(w.blurb)) : ""}`)])))] : []),
