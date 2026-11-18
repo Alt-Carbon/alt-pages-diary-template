@@ -24,7 +24,7 @@ const reading = JSON.parse(readFileSync("content/reading.json", "utf8"));
 // after a profile is added. YAML double-quoted strings, so no raw double quotes inside.
 const SAMPLE = !String(site.goodreads || "").trim() && reading.show !== false;
 const sampleWarning = SAMPLE
-  ? "⚠️ Not set yet, so your Reading page shows a sample shelf. "
+  ? " ⚠️ Not set yet, so your Reading page shows a sample shelf."
   : "";
 
 // The same for Medium and Substack: until one is set, the Writing page (if it has any pieces) also
@@ -33,7 +33,7 @@ const postSources = { medium: mediumSource(site.medium), substack: substackSourc
 const pieces = existsSync("content/writing") ? readdirSync("content/writing").filter((f) => f.endsWith(".md")).length : 0;
 const SAMPLE_POSTS = !postSources.medium && !postSources.substack && pieces > 0;
 const postsWarning = SAMPLE_POSTS
-  ? "⚠️ Not set yet, so your Writing page shows sample posts. "
+  ? " ⚠️ Not set yet, so your Writing page shows sample posts."
   : "";
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const accents = JSON.parse(readFileSync("src/lib/accents.json", "utf8"));
@@ -128,9 +128,9 @@ singletons:
       - { label: Employer link, name: employerUrl, widget: string, required: false }
       - { label: Photo, name: photo, widget: image, required: false, hint: "Shown on the About page." }${links("social", "Social links", "Email first, as mailto:you@example.com")}
       - { label: Accent colour, name: accent, widget: select, default: aerospace-orange, hint: "Used for the favicon and the link-preview cards.", options: [ ${accents.map((a) => `{ label: "${a.label}", value: ${a.id}, color: "${a.light}" }`).join(", ")} ] }
-      - { label: Goodreads profile, name: goodreads, widget: string, required: false, hint: "${sampleWarning}Your Goodreads profile address. It must be public." }
-      - { label: Medium, name: medium, widget: string, required: false, hint: "${postsWarning}Your Medium address or @handle. Shows your 10 newest stories." }
-      - { label: Substack, name: substack, widget: string, required: false, hint: "${postsWarning}Your Substack address, e.g. yourname.substack.com. Shows your 20 newest posts." }
+      - { label: Goodreads profile, name: goodreads, widget: string, required: false, hint: "Your Goodreads profile address. It must be public.${sampleWarning}" }
+      - { label: Medium, name: medium, widget: string, required: false, hint: "Your Medium address or @handle. Shows your 10 newest stories.${postsWarning}" }
+      - { label: Substack, name: substack, widget: string, required: false, hint: "Your Substack address, e.g. yourname.substack.com. Shows your 20 newest posts.${postsWarning}" }
       - label: Advanced
         name: advanced
         widget: object
