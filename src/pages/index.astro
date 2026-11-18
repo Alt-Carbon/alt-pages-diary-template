@@ -9,11 +9,27 @@ import "@fontsource-variable/geist/wght-italic.css";
 import "@fontsource-variable/eb-garamond/wght.css";
 import css from "../diary/notebook.css?raw";
 import notebook from "../diary/notebook.js?raw";
-import { about, currentRole, day, freshness, inline, markMe, monthYear, now, origin, owner, pages, reading, repo, research, shown, site, summary, template, whereIs, writing, writingPage, years } from "../lib/content";
+import { about, currentRole, day, freshness, inline, markMe, menu, monthYear, now, origin, owner, ownPages, reading, repo, research, shown, site, template, whereIs, writing, writingPage, years } from "../lib/content";
 
-const posts = await writing();
 const fresh = await freshness();
 const on = await shown();
+// A section that is switched off (or empty) leaves no trace: no tab, no pages, no links to it.
+const posts = on.has("writing") ? await writing() : [];
+
+// Your pages (content/pages/*.md) that are on, each a tab and a section, in menu order (by title,
+// before About). The tabs run down one edge of the pad, so three fit beside the built-in ones.
+// A name the notebook already uses for a place in it (home, an essay, a section's later pages) would
+// open the wrong page, so that page is left out too.
+const OWN_TABS = 3;
+const mine = (await ownPages()).filter((p) => p.data.show);
+const sections = ["home", ...on, ...mine.map((p) => p.id)];
+const clash = (id: string) => id === "home" || id.startsWith("essay-") || sections.some((s) => s !== id && id.startsWith(s + "-") && /^\d+$/.test(id.slice(s.length + 1)));
+for (const p of mine.filter((p) => clash(p.id))) console.warn(`content/pages/${p.id}.md: "${p.id}" is already a place in the notebook, so this page is left out. Rename the file.`);
+const fits = mine.filter((p) => !clash(p.id));
+for (const p of fits.slice(OWN_TABS)) console.warn(`content/pages/${p.id}.md: Lab Diary has room for ${OWN_TABS} of your pages; this one is left out.`);
+const own = fits.slice(0, OWN_TABS);
+const kept = new Set(own.map((p) => `page:${p.id}`));
+const tabs = (await menu()).filter((m) => !m.id.startsWith("page:") || kept.has(m.id)).map((m) => [m.id.replace(/^page:/, ""), m.label]);
 
 // "Before Alt Carbon, I worked at X and Y." from the ended roles, each organisation once, in order.
 const past = about.experience.filter((e) => e.end && e.org !== currentRole?.org).map((e) => e.org);
@@ -23,23 +39,26 @@ const before = orgs.length ? `${currentRole ? `Before ${currentRole.org}, I` : "
 
 // A piece's Markdown, rendered. Footnote ids are made unique per piece, since every piece is one document
 // but they all share the notebook.
-const html = (p: (typeof posts)[number]) => (p.data.link ? "" : (p.rendered?.html ?? "")
-  .replace(/id="user-content-/g, `id="${p.id}-`).replace(/href="#user-content-/g, `href="#${p.id}-`));
+const unique = (id: string, html = "") => html.replace(/id="user-content-/g, `id="${id}-`).replace(/href="#user-content-/g, `href="#${id}-`);
+const html = (p: (typeof posts)[number]) => (p.data.link ? "" : unique(p.id, p.rendered?.html));
 
 const DATA = {
   name: site.name, greeting: site.greeting, employer: site.employer, employerUrl: site.employerUrl, place: site.place, photo: site.photo,
   updated: day(fresh.date), oneLiner: site.oneLiner, intro: site.intro, before,
   social: site.social.map((l) => [l.label, l.url]),
-  pages: pages.filter((p) => on.has(p.id)).map((p) => [p.id, p.label]),
+  pages: tabs,
+  // Your pages: the title is the tab's, then the photo and the Markdown, rendered as an essay's is.
+  own: own.map((p) => ({ id: p.id, photo: p.data.photo, html: unique(`page-${p.id}`, p.rendered?.html) })),
   now: on.has("now") ? now.groups.map((g) => [g.heading, g.items.map(inline)]) : [], nowUpdated: day(now.updated),
-  about: about.paragraphs.map(inline), contact: inline(about.contact), shortBio: about.shortBio, cv: about.cv,
-  facts: about.facts.map((f) => [f.label, inline(f.value)]),
-  experience: about.experience.map((e) => ({ role: e.role, org: e.org, orgUrl: e.orgUrl, when: years(e), summary: inline(e.summary) })),
+  // A section that is off isn't sent at all, so its words aren't in the page either.
+  about: on.has("about") ? about.paragraphs.map(inline) : [], contact: on.has("about") ? inline(about.contact) : "", shortBio: on.has("about") ? about.shortBio : "", cv: about.cv,
+  facts: on.has("about") ? about.facts.map((f) => [f.label, inline(f.value)]) : [],
+  experience: (on.has("about") ? about.experience : []).map((e) => ({ role: e.role, org: e.org, orgUrl: e.orgUrl, when: years(e), summary: inline(e.summary) })),
   writingIntro: writingPage.intro, hide: writingPage.hide,
   // `where` is the chip beside a piece that lives on another site; posts synced from Medium and Substack join this list in the browser.
   writing: posts.map((p) => ({ id: p.id, iso: p.data.date.toISOString().slice(0, 10), date: day(p.data.date), title: p.data.title, blurb: p.data.blurb || "", link: p.data.link || "", where: p.data.link ? whereIs(p.data.link) : "", html: html(p) })),
-  research: { intro: research.intro, items: [...research.items].sort((a, b) => b.year - a.year).map((r) => ({ ...r, authors: markMe(r.authors), note: inline(r.note), links: r.links.map((l) => [l.label, l.url]) })) },
-  reading: { intro: reading.intro, links: reading.links.map((l) => ({ title: l.title, by: l.by, kind: l.kind, date: l.date ? monthYear(l.date) : "", note: inline(l.note), url: l.url })) },
+  research: { intro: research.intro, items: (on.has("research") ? [...research.items] : []).sort((a, b) => b.year - a.year).map((r) => ({ ...r, authors: markMe(r.authors), note: inline(r.note), links: r.links.map((l) => [l.label, l.url]) })) },
+  reading: { intro: reading.intro, links: (on.has("reading") ? reading.links : []).map((l) => ({ title: l.title, by: l.by, kind: l.kind, date: l.date ? monthYear(l.date) : "", note: inline(l.note), url: l.url })) },
   books: [], synced: "", goodreads: site.goodreads.trim() || "https://www.goodreads.com/",
 };
 const script = `const DATA = ${JSON.stringify(DATA).replace(/</g, "\\u003c")};\n${notebook}`;
@@ -50,7 +69,7 @@ const base = origin(Astro.url);
 const url = base + "/";
 const img = base + "/og/home.png";
 const sameAs = site.social.map((l) => l.url).filter((u) => /^https?:/.test(u));
-const person = { "@type": "Person", name: site.name, url: `${base}/#about`, ...(site.photo && { image: base + site.photo }), ...(about.shortBio && { description: about.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
+const person = { "@type": "Person", name: site.name, url: on.has("about") ? `${base}/#about` : url, ...(site.photo && { image: base + site.photo }), ...(DATA.shortBio && { description: DATA.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
 const ld = { "@context": "https://schema.org", "@type": "WebSite", name: site.name, url, author: person };
 ---
 <!doctype html>
@@ -75,13 +94,13 @@ const ld = { "@context": "https://schema.org", "@type": "WebSite", name: site.na
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="alternate" type="application/rss+xml" href="/rss.xml" title={`${site.name}: writing`}>
+{on.has("writing") && <link rel="alternate" type="application/rss+xml" href="/rss.xml" title={`${site.name}: writing`}>}
 <link rel="sitemap" type="application/xml" href="/sitemap.xml">
 <script type="application/ld+json" set:html={JSON.stringify(ld).replace(/</g, "\\u003c")} />
 <meta name="portfolio-template" content={`${template.name}@${template.version}`}>
 {owner && <meta name="portfolio-owner" content={owner}>}
 {repo && <meta name="portfolio-repo" content={repo}>}
-<link rel="alternate" type="application/json" href="/reading/view.json" title="Reading">
+{on.has("reading") && <link rel="alternate" type="application/json" href="/reading/view.json" title="Reading">}
 <style is:inline set:html={css}></style>
 </head>
 <body>
@@ -99,7 +118,7 @@ const ld = { "@context": "https://schema.org", "@type": "WebSite", name: site.na
     </div>
   </div>
 </main>
-<noscript>This notebook needs JavaScript to turn its pages. <a href="/rss.xml">Writing</a>, <a href="/reading/books.json">books</a>.</noscript>
+<noscript>This notebook needs JavaScript to turn its pages.{on.has("writing") && <> <a href="/rss.xml">Writing</a>.</>}{on.has("reading") && <> <a href="/reading/books.json">Books</a>.</>}</noscript>
 <script type="module" is:inline set:html={script}></script>
 </body>
 </html>

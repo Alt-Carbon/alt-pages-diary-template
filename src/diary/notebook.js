@@ -2,7 +2,9 @@
 /* ------------------------------------------- books and posts, from the syncs */
 {
   const get = (u) => fetch(u, { headers: { accept: "application/json" } }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-  const [view, posts] = await Promise.all([get("/reading/view.json"), get("/writing/elsewhere.json")]);
+  // Only for the sections that are on: a switched-off Reading or Writing shows no books or posts anywhere.
+  const on = new Set(DATA.pages.map(([id]) => id));
+  const [view, posts] = await Promise.all([on.has("reading") && get("/reading/view.json"), on.has("writing") && get("/writing/elsewhere.json")]);
   const human = (s) => s.replace(/[-_]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
   const M = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
   const when = (iso) => { const d = new Date(iso); return `${d.getUTCDate()} ${M[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
@@ -186,7 +188,14 @@ const BLOCKS = {
     ...(DATA.facts.length ? [B(`<div class="cells">${DATA.facts.map(([k, v]) => `<div><b>${esc(k)}</b>${v}</div>`).join("")}</div>`)] : []),
     ...(DATA.shortBio ? [lab("Short bio"), para(esc(DATA.shortBio))] : [])],
 };
-const blocksFor = s => [...(BLOCKS[s.id] || (t => [...opener(t), para(`${esc(t.desc)}.`)]))(s), ...(DOODLE[s.id] ? [B(doodle(s.id), { optional: true })] : [])];
+/* Your pages (content/pages): the title, the photo if there is one, then the Markdown, flowing over
+   as many pages as it needs, like an essay. They have no doodle of their own. */
+const OWN = new Map(DATA.own.map(p => [p.id, p]));
+const ownBlocks = (s, p) => [...opener(s),
+  ...(p.photo ? [B(`<figure class="photo"><img src="${esc(p.photo)}" alt="" width="400" height="400"></figure>`)] : []),
+  ...htmlBlocks(p.html)];
+const blocksFor = s => OWN.has(s.id) ? ownBlocks(s, OWN.get(s.id))
+  : [...BLOCKS[s.id](s), ...(Object.hasOwn(DOODLE, s.id) ? [B(doodle(s.id), { optional: true })] : [])];
 
 /* ------------------------------------------------------------ pages */
 /* Consecutive blocks of one group are wrapped as one table or list. */
@@ -254,7 +263,7 @@ function paginate(blocks, box, H) {
 /* ----------------------------------------------------------- build */
 /* PAGES are the leaves: each has a left page (its back, seen when the leaf before it is
    turned) and a right page (its front). ANCHOR maps every hash to the leaf that shows it. */
-let PAGES = [], pageEls = {}, ANCHOR = {};
+let PAGES = [], pageEls = {}, ANCHOR = Object.create(null);
 const idx = id => PAGES.findIndex(p => p.id === id);
 const FLAG = ["#e9dcbf", "#e2d2ae", "#dbc9a3", "#e6d8ba", "#dfcfa9", "#ecdfc5", "#d8c59c"];
 $("#tabs").innerHTML = '<li class="shade" role="presentation" aria-hidden="true"></li>' + SECTIONS.map((s, i) =>
@@ -280,9 +289,9 @@ function build() {
   } else {
     for (const s of SECTIONS) { firstPage[s.id] = n + 1; leaves.push({ section: s.id, left: { html: "", anchors: [] }, right: { html: assemble(blocksFor(s)), anchors: [] } }); n += 2; }
   }
-  const pn = html => html.replace(/data-pn="([a-z0-9-]+)">p\. 00/g, (_, id) => `data-pn="${id}">p. ${pad(firstPage[id])}`);
-  ANCHOR = {};
-  const count = {};
+  const pn = html => html.replace(/data-pn="([^"]+)">p\. 00/g, (_, id) => `data-pn="${id}">p. ${pad(firstPage[id])}`);
+  ANCHOR = Object.create(null);   // hashes come from file names too: "#constructor" must not find a built-in
+  const count = Object.create(null);
   PAGES = leaves.map(l => {
     const k = count[l.section] = (count[l.section] || 0) + 1;
     const id = k === 1 ? l.section : `${l.section}-${k}`;

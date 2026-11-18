@@ -1,14 +1,15 @@
 // The writing as an RSS feed, full text included. A piece's address is its place in the notebook. Addresses are absolute: the Worker fills in the
 // site's own address (see origin() in src/lib/content.ts).
 import type { APIRoute } from "astro";
-import { origin, site, summary, writing } from "../lib/content";
+import { origin, shown, site, summary, writing } from "../lib/content";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const cdata = (s: string) => `<![CDATA[${s.replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;
 
 export const GET: APIRoute = async ({ url }) => {
   const base = origin(url);
-  const posts = await writing();
+  // Writing switched off: the feed stays (readers' apps keep asking for it) but has nothing in it.
+  const posts = (await shown()).has("writing") ? await writing() : [];
   const items = posts.map((p) => {
     const link = p.data.link || `${base}/#essay-${p.id}`;   // every piece is pages of the one notebook
     const html = !p.data.link && p.rendered?.html;
