@@ -85,6 +85,8 @@ const ld = { "@context": "https://schema.org", "@type": "WebSite", name: site.na
 <style is:inline set:html={css}></style>
 </head>
 <body>
+  <!-- The owner's content/custom.css: first in the body, so it comes after every stylesheet Astro adds to the head (and wins), yet still loads before anything is drawn. -->
+  <link rel="stylesheet" href="/custom.css" />
 <main class="scene" aria-label="Lab notebook">
   <div class="stage">
     <div class="book" id="book">
