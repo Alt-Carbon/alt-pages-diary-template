@@ -227,6 +227,51 @@ singletons:
               - { label: Kind, name: kind, widget: select, default: Paper, options: [${RESEARCH_KINDS.join(", ")}] }
               - { label: Link, name: url, widget: string, required: false, hint: "The DOI or main page. The title links here." }
               - { label: Note, name: note, widget: string, required: false }${links("links", "More links", "PDF, Code, Data, Slides, Recording", "              ")}
+# The editor by page: the book's tabs in order, each with the fields that show on it.
+# Fields not named here stay in Site settings. Files don't move; only the editor groups them.
+# The whole site is one page (/): a tab's address is /#<id>, an essay's /#essay-<slug>, one of your
+# pages' /#<slug>, so the editor's preview turns the book to the tab being edited. None is plain /,
+# or the editor would take a click on any link inside the book for Home.
+site_pages:
+  - id: home
+    label: Home
+    url: /#home
+    lede: "The first spread of your notebook, under your name and links. Below these, your newest writing, research and books appear by themselves."
+    fields: [site.greeting, site.oneLiner, site.employer, site.employerUrl, site.place]
+    note: "Also on Home: the contents, where you worked before (from About), the first line of Now, and your newest writing, research and books. Change those on their own pages."
+  - id: writing
+    label: Writing
+    url: /#writing
+    show: writing_page.show
+    tabs:
+      - { label: On this site, fields: [writing_page.intro], collection: writing, entry_url: "/#essay-{slug}" }
+      - { label: Elsewhere, lede: "Posts you write on Medium or Substack, listed with the rest. They're fetched by themselves, about twice a day.", fields: [site.medium, site.substack, writing_page.hide] }
+  - id: research
+    label: Research
+    url: /#research
+    show: research.show
+    fields: [research.intro, research.items]
+  - id: reading
+    label: Reading
+    url: /#reading
+    show: reading.show
+    lede: "Your Goodreads shelf, kept up to date by itself. Until you add your profile, the tab shows a sample shelf."
+    fields: [site.goodreads, reading.intro]
+  - id: now
+    label: Now
+    url: /#now
+    show: now.show
+    lede: "What you're focused on this month."
+    fields: [now.updated, now.groups]
+  - { own: pages, entry_url: "/#{slug}" }
+  - id: about
+    label: About
+    url: /#about
+    show: about.show
+    fields:
+      - { group: You, fields: [site.photo, about.paragraphs] }
+      - { group: Experience, fields: [about.experience, about.cv] }
+      - { group: Contact, fields: [about.contact, about.facts, about.shortBio] }
 collections:
   - name: writing
     label: Writing
