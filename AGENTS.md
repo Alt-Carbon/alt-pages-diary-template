@@ -72,7 +72,9 @@ The editor at `/admin` shows the site beside its form. In templates that have th
 - `data-field="site.greeting"`: a field of a content file, as `<file's name in the editor config>.<field>` (`site`, `about`, `now`, `research`, `reading`, `writing_page`).
 - `data-field="writing:<slug>"`: one piece of writing (a row, a card); `data-field="writing:<slug>.title"` its title. Your pages use `pages:<slug>`.
 
-Lab Diary has no marks yet: the book is drawn in the browser by `src/diary/notebook.js`, and its marks come with a later rework. Until then the preview shows the book without outlines, and nothing breaks. Don't add them piecemeal.
+The book is drawn in the browser by `src/diary/notebook.js`, so the marks are in the HTML strings it builds (`mark(html, field)` puts one on a block's first element). When you add or change a block there, keep its mark. In the editor's preview a click on marked text opens its field instead of turning the page; tabs and links without a mark still turn pages.
+
+The first spread (the `home` section) holds About and Now as well as the greeting and description: they have no tabs of their own. `site.cover` picks what the left page shows under the name, the contents or up to four `site.photos` taped in.
 
 ## Ask first, or leave alone
 

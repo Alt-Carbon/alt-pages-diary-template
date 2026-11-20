@@ -67,6 +67,8 @@ const sec = (label, inner) => `<div class="sec">${label ? `<div class="lab">${la
 const table = (heads, rows) => `<table>${heads ? `<thead><tr>${heads.map(h => `<th>${h}</th>`).join("")}</tr></thead>` : ""}<tbody>${rows.join("")}</tbody></table>`;
 const tr = (cells, cls) => `<tr${cls ? ` class="${cls}"` : ""}>${cells.join("")}</tr>`;
 const td = (v, cls) => `<td${cls ? ` class="${cls}"` : ""}>${v}</td>`;
+// data-field: which field an element shows, for the editor's preview (AGENTS.md).
+const mark = (html, f) => f ? html.replace(/^<([a-z0-9]+)/i, `<$1 data-field="${f}"`) : html;
 const sub = (a, n) => `<span class="s">${a}${n ? `${a ? ". " : ""}${n}` : ""}</span>`;   // the second part is already escaped or is markup
 
 /* ------------------------------------------------ doodles, one a page */
@@ -119,47 +121,68 @@ const pieceHref = w => w.link || "#" + essayId(w.id);
 const where = w => w.where ? ` <span class="tag">${esc(w.where)}</span>` : "";   // the chip beside a piece that lives on another site
 const BLOCKS = {
   home: () => {
-    const latest = DATA.books.filter(b => b[3]).sort((a, b) => b[3] - a[3]).slice(0, 5);
-    const res = DATA.research.items.slice(0, 3);
+    // Left page: the name, then the contents or (by choice) photos taped in. Right page: a few lines
+    // about the person, About and Now included; Writing, Research and Reading have their own tabs.
+    const photos = DATA.cover === "photos" ? DATA.photos : [];
+    const role = [DATA.employer && `<span data-field="site.employer">${esc(DATA.employer)}</span>`, DATA.place && `<span data-field="site.place">${esc(DATA.place)}</span>`].filter(Boolean).join(" · ");
+    const now = DATA.now.filter(([, items]) => items.length);
     return [
       meta("Notebook", `Updated ${tdate(DATA.updated)}`),
-      head(DATA.name, "name"), para(`${esc(DATA.employer)} · ${esc(DATA.place)}`, "role"),
-      B(`<div class="links">${DATA.social.map(([l, h]) => link(l, h)).join("")}</div>`),
-      lab("Contents"),
-      ...tableRows(null, SECTIONS.slice(1).map((t, j) => tr([td(pad(j + 2), "d"), td(link(t.tab, "#" + t.id)), td(`<span data-pn="${t.id}">p. 00</span>`, "k")]))),
-      B(`<p class="hi">${esc(DATA.greeting || `Hi, I’m ${DATA.name.split(" ")[0]}.`)}</p>`, { break: true, keep: true }),
-      para(esc(DATA.oneLiner), "lead"),
-      ...(DATA.before ? [para(esc(DATA.before))] : []),
-      ...(DATA.now.length ? [para(`<a href="#now">Now</a>${DATA.now[0][1][0]}`, "nowline")] : []),
-      ...(DATA.writing.length ? [lab(`Writing ${all("View all", "#writing")}`), ...tableRows(null, DATA.writing.slice(0, 4).map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${where(w)}${w.blurb ? sub(esc(w.blurb)) : ""}`)])))] : []),
-      // Home is one spread: what follows is shown as far as the page has room.
-      ...optional([
-        ...(res.length ? [lab(`Research ${all("View all", "#research")}`), ...tableRows(null, res.map(r => tr([td(`${link(r.title, r.url || "#research")}${sub(esc(r.venue || r.kind))}`), td(r.year, "k")])))] : []),
-        ...(latest.length ? [lab(`Books ${all("View all", "#reading")}`), ...tableRows(null, latest.map(([t, a, , y]) => tr([td(`${link(t, bookUrl(t))}${sub(esc(a))}`), td(y, "k")])))] : []),
+      B(`<h1 class="name" data-field="site.name">${esc(DATA.name)}</h1>`, { keep: true }),
+      ...(role ? [para(role, "role")] : []),
+      B(`<div class="links" data-field="site.social">${DATA.social.map(([l, h]) => link(l, h)).join("")}</div>`),
+      ...(photos.length
+        ? [B(`<div class="taped n${photos.length}" data-field="site.photos">${photos.map((src, i) => `<figure style="--r:${[-2.5, 1.8, -1.2, 2.4][i]}deg"><img src="${esc(src)}" alt="" width="400" height="400"></figure>`).join("")}</div>`)]
+        : SECTIONS.length > 1 ? [lab("Contents"), ...tableRows(null, SECTIONS.slice(1).map((t, j) => tr([td(pad(j + 2), "d"), td(link(t.tab, "#" + t.id)), td(`<span data-pn="${t.id}">p. 00</span>`, "k")])))] : []),
+      B(`<p class="hi" data-field="site.greeting">${esc(DATA.greeting || `Hi, I’m ${DATA.name.split(" ")[0]}.`)}</p>`, { break: true, keep: true }),
+      B(`<p class="lead" data-field="site.oneLiner">${esc(DATA.oneLiner)}</p>`),
+      ...(DATA.about.length ? [
+        lab("About"),
+        ...(DATA.photo ? [B(`<figure class="snap" data-field="site.photo"><img src="${esc(DATA.photo)}" alt="Photo of ${esc(DATA.name)}" width="400" height="400"></figure>`)] : []),
+        ...DATA.about.map(p => B(`<p data-field="about.paragraphs">${p}</p>`)),
+      ] : []),
+      ...(DATA.experience.length ? [lab(`Experience ${DATA.cv ? all("CV (PDF)", DATA.cv) : ""}`), ...tableRows(null, DATA.experience.map(e =>
+        mark(tr([td(esc(e.when), "d"), td(`<b>${esc(e.role)}</b>, ${e.orgUrl ? link(e.org, e.orgUrl) : esc(e.org)}${e.summary ? sub(e.summary) : ""}`)]), "about.experience")))] : []),
+      ...(now.length ? [lab(`Now · <span data-field="now.updated">${esc(DATA.nowUpdated)}</span>`), ...now.map(([h, items]) => B(`<p class="nowg" data-field="now.groups"><b>${esc(h)}</b> ${items.join(" ")}</p>`))] : []),
+      ...(DATA.contact ? [lab("Contact"), B(`<p data-field="about.contact">${DATA.contact}</p>`)] : []),
+      ...(DATA.facts.length ? [B(`<div class="cells" data-field="about.facts">${DATA.facts.map(([k, v]) => `<div><b>${esc(k)}</b>${v}</div>`).join("")}</div>`)] : []),
+      ...(DATA.shortBio ? [lab("Short bio"), B(`<p data-field="about.shortBio">${esc(DATA.shortBio)}</p>`)] : []),
+    ];
+  },
+  writing: s => {
+    // Two lists: what lives on this site, then what is on Medium or Substack, the newest few of those,
+    // with a link to the rest there (feedback 18 Nov 2026: keep them apart, and don't let them overflow).
+    const AWAY = 8;
+    const mine = DATA.writing.filter(w => !w.id.startsWith("x-")), away = DATA.writing.filter(w => w.id.startsWith("x-"));
+    const row = (w, f) => mark(tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${where(w)}${w.blurb ? sub(esc(w.blurb)) : ""}`)]), f);
+    const from = DATA.postsFrom || [];
+    const rest = away.length - AWAY;
+    return [
+      ...opener(s), B(`<p data-field="writing_page.intro">${esc(DATA.writingIntro || "Essays and notes.")}</p>`),
+      ...(mine.length ? [lab(away.length ? "On this site" : "Pieces"), ...tableRows(null, mine.map(w => row(w, `writing:${w.id}`)))] : []),
+      ...(away.length ? [
+        lab("Elsewhere"),
+        ...tableRows(null, away.slice(0, AWAY).map(w => row(w, w.where === "Medium" ? "site.medium" : "site.substack"))),
+        ...(rest > 0 || from.length ? [para(`${rest > 0 ? `${rest} more` : "More"}${from.length ? ` on ${from.map(([n, u]) => link(n, u)).join(" and ")}` : ""}${DATA.postsSynced ? `, synced ${esc(DATA.postsSynced)}` : ""}.`, "fn")] : []),
+      ] : []),
+      ...DATA.writing.filter(w => w.html).flatMap(w => [
+        B(`<div class="lab">Essay · ${tdate(w.date)}</div>`, { keep: true, break: "soft", anchor: essayId(w.id) }),
+        B(`<h1 class="h" data-field="writing:${w.id}.title">${esc(w.title)}</h1>`, { keep: true }), ...(w.blurb ? [para(esc(w.blurb), "blurb")] : []),
+        ...htmlBlocks(w.html),
       ]),
     ];
   },
-  writing: s => [
-    ...opener(s), para(esc(DATA.writingIntro || "Essays and notes.")),
-    ...(DATA.postsFrom?.length ? [para(`Posts on ${DATA.postsFrom.map(([n, u]) => link(n, u)).join(" and ")} are synced from there${DATA.postsSynced ? `, ${esc(DATA.postsSynced)}` : ""}.`)] : []),
-    ...tableRows(["Date", "Title"], DATA.writing.map(w => tr([td(tdate(w.date), "d"), td(`${link(w.title, pieceHref(w))}${where(w)}${w.blurb ? sub(esc(w.blurb)) : ""}`)]))),
-    ...DATA.writing.filter(w => w.html).flatMap(w => [
-      B(`<div class="lab">Essay · ${tdate(w.date)}</div>`, { keep: true, break: "soft", anchor: essayId(w.id) }),
-      head(w.title), ...(w.blurb ? [para(esc(w.blurb), "blurb")] : []),
-      ...htmlBlocks(w.html),
-    ]),
-  ],
   research: s => {
     const years = [...new Set(DATA.research.items.map(r => r.year))];
-    return [...opener(s), ...(DATA.research.intro ? [para(DATA.research.intro)] : []),
-      ...years.flatMap(y => [lab(String(y)), ...tableRows(null, DATA.research.items.filter(r => r.year === y).map(r =>
-        tr([td(`${link(r.title, r.url)}<span class="s">${r.authors}${r.venue ? ` · <i>${esc(r.venue)}</i>` : ""}${r.note ? ` · ${r.note}` : ""}${lnk(r.links)}</span>`), td(esc(r.kind), "k")])))])];
+    return [...opener(s), ...(DATA.research.intro ? [B(`<p data-field="research.intro">${DATA.research.intro}</p>`)] : []),
+      ...years.flatMap(y => [lab(String(y)), ...tableRows(null, DATA.research.items.filter(r => r.year === y).map(r => mark(
+        tr([td(`${link(r.title, r.url)}<span class="s">${r.authors}${r.venue ? ` · <i>${esc(r.venue)}</i>` : ""}${r.note ? ` · ${r.note}` : ""}${lnk(r.links)}</span>`), td(esc(r.kind), "k")]), "research.items")))])];
   },
   reading: s => {
     // A reading log: what is open now, then the last BOOKS finished, by year. A whole shelf would be a
     // notebook of its own; the rest is on Goodreads.
-    const BOOKS = 24;
-    const open = DATA.books.filter(b => !b[3]).slice(0, 6), read = DATA.books.filter(b => b[3]).sort((a, b) => b[6].localeCompare(a[6])).slice(0, BOOKS);
+    const BOOKS = 12;
+    const open = DATA.books.filter(b => !b[3]).slice(0, 4), read = DATA.books.filter(b => b[3]).sort((a, b) => b[6].localeCompare(a[6])).slice(0, BOOKS);
     const groups = []; if (open.length) groups.push(["Reading now", open]);
     for (const b of read) { const y = String(b[3]); const g = groups.find(x => x[0] === y); g ? g[1].push(b) : groups.push([y, [b]]); }
     const rows = [];
@@ -167,32 +190,22 @@ const BLOCKS = {
       rows.push(B(`<tr class="g"><td colspan="2">${esc(topic)}</td></tr>`, { keep: true }));
       // A review is a line here, not the whole piece.
       const line = n => { const t = String(n).replace(/\s+/g, " ").trim(); return t.length > 140 ? t.slice(0, 137).replace(/\s+\S*$/, "") + "…" : t; };
-      for (const [t, a, , y, m, n] of bs) rows.push(tr([td(`${m === 2 ? "* " : ""}${link(t, bookUrl(t))}${sub(esc(a), n ? esc(line(n)) : "")}`), td(y || "Open", "k")]));
+      for (const [t, a, , y, m, n] of bs) rows.push(mark(tr([td(`${m === 2 ? "* " : ""}${link(t, bookUrl(t))}${sub(esc(a), n ? esc(line(n)) : "")}`), td(y || "Open", "k")]), "site.goodreads"));
     }
     const more = DATA.books.filter(b => b[3]).length - read.length;
     return [...opener(s),
-      ...(DATA.reading.intro ? [para(esc(DATA.reading.intro))] : []),
+      ...(DATA.reading.intro ? [B(`<p data-field="reading.intro">${esc(DATA.reading.intro)}</p>`)] : []),
       para(`Books are synced from my <a href="https://www.goodreads.com/">Goodreads</a> “read” shelf${DATA.synced ? `, ${esc(DATA.synced)}` : ""}. An asterisk marks the ones I would press into your hands.`),
       ...(rows.length ? [lab("Books"), ...tableRows(null, rows)] : []),
       ...(more > 0 ? [para(`${more} more on <a href="${DATA.goodreads}">Goodreads</a>.`, "fn")] : []),
       ...(DATA.reading.links.length ? [lab("Links"), ...tableRows(null, DATA.reading.links.map(l => tr([td(`${link(l.title, l.url)}${sub(esc(l.by), l.note ? l.note : "")}`), td(`${esc(l.kind)}${l.date ? ` · ${esc(l.date)}` : ""}`, "k")])))] : [])];
   },
-  now: s => [...opener(s), para(`Updated ${esc(DATA.nowUpdated)}. This is a <a href="https://nownownow.com/about">now page</a>.`),
-    ...DATA.now.flatMap(([h, items]) => [lab(h), ...listItems(items)])],
-  about: s => [...opener(s),
-    ...(DATA.photo ? [B(`<figure class="photo"><img src="${DATA.photo}" alt="Photo of ${esc(DATA.name)}" width="400" height="400"></figure>`)] : []),
-    ...DATA.about.map(p => para(p)),
-    ...(DATA.experience.length ? [lab(`Experience ${DATA.cv ? all("CV (PDF)", DATA.cv) : ""}`), ...tableRows(null, DATA.experience.map(e =>
-      tr([td(esc(e.when), "d"), td(`<b>${esc(e.role)}</b>, ${e.orgUrl ? link(e.org, e.orgUrl) : esc(e.org)}${e.summary ? sub(e.summary) : ""}`)])))] : []),
-    ...(DATA.contact ? [lab("Contact"), para(DATA.contact)] : []),
-    ...(DATA.facts.length ? [B(`<div class="cells">${DATA.facts.map(([k, v]) => `<div><b>${esc(k)}</b>${v}</div>`).join("")}</div>`)] : []),
-    ...(DATA.shortBio ? [lab("Short bio"), para(esc(DATA.shortBio))] : [])],
 };
 /* Your pages (content/pages): the title, the photo if there is one, then the Markdown, flowing over
    as many pages as it needs, like an essay. They have no doodle of their own. */
 const OWN = new Map(DATA.own.map(p => [p.id, p]));
-const ownBlocks = (s, p) => [...opener(s),
-  ...(p.photo ? [B(`<figure class="photo"><img src="${esc(p.photo)}" alt="" width="400" height="400"></figure>`)] : []),
+const ownBlocks = (s, p) => [meta(sectionNo(s.id), tdate(DATA.updated)), B(`<h1 class="h" data-field="pages:${s.id}.title">${esc(s.tab)}</h1>`, { keep: true }),
+  ...(p.photo ? [B(`<figure class="photo" data-field="pages:${s.id}.photo"><img src="${esc(p.photo)}" alt="" width="400" height="400"></figure>`)] : []),
   ...htmlBlocks(p.html)];
 const blocksFor = s => OWN.has(s.id) ? ownBlocks(s, OWN.get(s.id))
   : [...BLOCKS[s.id](s), ...(Object.hasOwn(DOODLE, s.id) ? [B(doodle(s.id), { optional: true })] : [])];

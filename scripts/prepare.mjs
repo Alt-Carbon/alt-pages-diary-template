@@ -132,7 +132,9 @@ singletons:
       - { label: Place, name: place, widget: string, required: false }
       - { label: Employer, name: employer, widget: string, required: false }
       - { label: Employer link, name: employerUrl, widget: string, required: false }
-      - { label: Photo, name: photo, widget: image, required: false, hint: "Shown on the About page." }${links("social", "Social links", "Email first, as mailto:you@example.com")}
+      - { label: Photo, name: photo, widget: image, required: false, hint: "Beside About, on the first spread. Also used when someone shares your site." }
+      - { label: First page, name: cover, widget: select, default: contents, required: false, hint: "What the left page shows under your name.", options: [ { label: "Contents: the list of your sections", value: contents }, { label: "Photos: up to four, taped in", value: photos } ] }
+      - { label: Photos, name: photos, widget: list, required: false, max: 4, field: { label: Photo, name: photo, widget: image }, hint: "Up to four, for a first page of photos." }${links("social", "Social links", "Email first, as mailto:you@example.com")}
       - { label: Accent colour, name: accent, widget: select, default: aerospace-orange, hint: "Used for the favicon and the link-preview cards.", options: [ ${accents.map((a) => `{ label: "${a.label}", value: ${a.id}, color: "${a.light}" }`).join(", ")} ] }
       - { label: Goodreads profile, name: goodreads, widget: string, required: false, sync: reading, hint: "Open your profile on Goodreads and copy its address, e.g. goodreads.com/user/show/12345678-asha-rao. The profile must be public.${sampleWarning}" }
       - { label: Medium, name: medium, widget: string, required: false, sync: medium, hint: "Your Medium address or @handle. Shows your 10 newest stories.${postsWarning}" }
@@ -152,7 +154,7 @@ singletons:
     file: content/now.json
     format: json
     fields:
-      - { label: Show the Now page, name: show, widget: boolean, default: false, required: false, hint: "What you are focused on this month. Only turn it on if you will update it every month or two." }
+      - { label: Show what you are doing now, name: show, widget: boolean, default: false, required: false, hint: "A few lines on the first spread about this month. Only turn it on if you will update it every month or two." }
       - { label: Updated on, name: updated, widget: datetime, format: YYYY-MM-DD, time_format: false }
       - label: Groups
         name: groups
@@ -168,7 +170,7 @@ singletons:
     file: content/about.json
     format: json
     fields:
-      - { label: "Show the About page", name: show, widget: boolean, default: true, required: false, hint: "Off takes it out of the menu and the home page, and its address says not found." }
+      - { label: "Show About on the first spread", name: show, widget: boolean, default: true, required: false, hint: "Off leaves only your greeting and description there." }
       - { label: Paragraphs, name: paragraphs, widget: list, field: { label: Paragraph, name: p, widget: text } }
       - label: Experience
         name: experience
@@ -234,18 +236,22 @@ singletons:
 # or the editor would take a click on any link inside the book for Home.
 site_pages:
   - id: home
-    label: Home
+    label: First spread
     url: /#home
-    lede: "The first spread of your notebook, under your name and links. Below these, your newest writing, research and books appear by themselves."
-    fields: [site.greeting, site.oneLiner, site.employer, site.employerUrl, site.place]
-    note: "Also on Home: the contents, where you worked before (from About), the first line of Now, and your newest writing, research and books. Change those on their own pages."
+    lede: "The first two pages of your notebook: your name and the contents (or photos) on the left, then a few lines about you on the right."
+    fields:
+      - site.greeting
+      - site.oneLiner
+      - { group: Left page, fields: [site.cover, site.photos, site.employer, site.employerUrl, site.place] }
+      - { group: About you, fields: [about.show, site.photo, about.paragraphs, about.experience, about.cv, about.contact, about.facts, about.shortBio] }
+      - { group: Now, fields: [now.show, now.updated, now.groups] }
   - id: writing
     label: Writing
     url: /#writing
     show: writing_page.show
     tabs:
       - { label: On this site, fields: [writing_page.intro], collection: writing, entry_url: "/#essay-{slug}" }
-      - { label: Elsewhere, lede: "Posts you write on Medium or Substack, listed with the rest. They're fetched by themselves, about twice a day.", fields: [site.medium, site.substack, writing_page.hide] }
+      - { label: Elsewhere, lede: "Posts you write on Medium or Substack, listed after your own under Elsewhere. They're fetched by themselves, about twice a day.", fields: [site.medium, site.substack, writing_page.hide] }
   - id: research
     label: Research
     url: /#research
@@ -257,21 +263,7 @@ site_pages:
     show: reading.show
     lede: "Your Goodreads shelf, kept up to date by itself. Until you add your profile, the tab shows a sample shelf."
     fields: [site.goodreads, reading.intro]
-  - id: now
-    label: Now
-    url: /#now
-    show: now.show
-    lede: "What you're focused on this month."
-    fields: [now.updated, now.groups]
   - { own: pages, entry_url: "/#{slug}" }
-  - id: about
-    label: About
-    url: /#about
-    show: about.show
-    fields:
-      - { group: You, fields: [site.photo, about.paragraphs] }
-      - { group: Experience, fields: [about.experience, about.cv] }
-      - { group: Contact, fields: [about.contact, about.facts, about.shortBio] }
 collections:
   - name: writing
     label: Writing

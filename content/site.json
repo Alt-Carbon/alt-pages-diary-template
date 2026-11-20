@@ -6,6 +6,8 @@
   "employer": "Alt Carbon",
   "employerUrl": "https://altcarbon.com",
   "photo": "/media/photo.png",
+  "cover": "contents",
+  "photos": [],
   "social": [
     {
       "label": "Email",

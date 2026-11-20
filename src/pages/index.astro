@@ -29,7 +29,9 @@ const fits = mine.filter((p) => !clash(p.id));
 for (const p of fits.slice(OWN_TABS)) console.warn(`content/pages/${p.id}.md: Lab Diary has room for ${OWN_TABS} of your pages; this one is left out.`);
 const own = fits.slice(0, OWN_TABS);
 const kept = new Set(own.map((p) => `page:${p.id}`));
-const tabs = (await menu()).filter((m) => !m.id.startsWith("page:") || kept.has(m.id)).map((m) => [m.id.replace(/^page:/, ""), m.label]);
+// About and Now live on the first spread (feedback 18 Nov 2026), so they have no tab of their own.
+const ON_HOME = new Set(["about", "now"]);
+const tabs = (await menu()).filter((m) => !ON_HOME.has(m.id) && (!m.id.startsWith("page:") || kept.has(m.id))).map((m) => [m.id.replace(/^page:/, ""), m.label]);
 
 // "Before Alt Carbon, I worked at X and Y." from the ended roles, each organisation once, in order.
 const past = about.experience.filter((e) => e.end && e.org !== currentRole?.org).map((e) => e.org);
@@ -44,6 +46,7 @@ const html = (p: (typeof posts)[number]) => (p.data.link ? "" : unique(p.id, p.r
 
 const DATA = {
   name: site.name, greeting: site.greeting, employer: site.employer, employerUrl: site.employerUrl, place: site.place, photo: site.photo,
+  cover: site.cover, photos: site.photos.filter(Boolean).slice(0, 4),
   updated: day(fresh.date), oneLiner: site.oneLiner, before,
   social: site.social.map((l) => [l.label, l.url]),
   pages: tabs,
@@ -69,7 +72,7 @@ const base = origin(Astro.url);
 const url = base + "/";
 const img = base + "/og/home.png";
 const sameAs = site.social.map((l) => l.url).filter((u) => /^https?:/.test(u));
-const person = { "@type": "Person", name: site.name, url: on.has("about") ? `${base}/#about` : url, ...(site.photo && { image: base + site.photo }), ...(DATA.shortBio && { description: DATA.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
+const person = { "@type": "Person", name: site.name, url, ...(site.photo && { image: base + site.photo }), ...(DATA.shortBio && { description: DATA.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
 const ld = { "@context": "https://schema.org", "@type": "WebSite", name: site.name, url, author: person };
 ---
 <!doctype html>

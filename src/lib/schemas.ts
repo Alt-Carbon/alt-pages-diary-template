@@ -19,6 +19,9 @@ export const Site = z.object({
   employer: z.string().default(""),
   employerUrl: z.string().default(""),
   photo: z.string().default(""),
+  // Lab Diary: what the first page shows under the name, the contents or up to four photos taped in.
+  cover: z.enum(["contents", "photos"]).catch("contents").default("contents"),
+  photos: z.array(z.string()).default([]),
   social: z.array(link).default([]),
   goodreads: z.string().default(""),
   // Where the owner publishes elsewhere; their newest posts join the Writing page (src/worker/core/posts.js).
